@@ -1,0 +1,1668 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Toko Baja Ringan Terpercaya - Menyediakan berbagai kebutuhan baja ringan untuk konstruksi Anda dengan kualitas terbaik dan harga terjangkau">
+    <title>BajaRinganKu - Toko Baja Ringan 3D Interaktif</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <!-- GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+    <!-- Firebase Compat SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+    <style>
+        /* ===== CSS VARIABLES ===== */
+        :root {
+            --black:       #0a0a0a;
+            --black-2:     #111111;
+            --black-3:     #1a1a1a;
+            --black-4:     #222222;
+            --gold:        #c9a84c;
+            --gold-light:  #e8c96a;
+            --gold-dark:   #a07830;
+            --white:       #ffffff;
+            --white-dim:   rgba(255,255,255,0.7);
+            --white-faint: rgba(255,255,255,0.12);
+            --border:      rgba(255,255,255,0.08);
+            --shadow-gold: 0 8px 40px rgba(201,168,76,0.25);
+            --shadow-dark: 0 20px 60px rgba(0,0,0,0.6);
+            --radius:      4px;
+            --radius-lg:   8px;
+            --ease:        cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            --transition:  all 0.45s var(--ease);
+        }
+        /* ===== RESET ===== */
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Barlow', sans-serif;
+            background: var(--black);
+            color: var(--white);
+            overflow-x: hidden;
+        }
+        a { text-decoration: none; color: inherit; }
+        img { max-width: 100%; display: block; }
+
+        /* ===== PRELOADER ===== */
+        #preloader {
+            position: fixed; inset: 0;
+            background: var(--black);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 99999;
+            transition: opacity 0.9s ease, visibility 0.9s ease;
+        }
+        #preloader.hidden { opacity: 0; visibility: hidden; }
+        .preloader-inner { text-align: center; }
+        .preloader-bar {
+            width: 200px; height: 2px;
+            background: var(--black-4);
+            margin: 1.5rem auto 0;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .preloader-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--gold-dark), var(--gold-light));
+            animation: loadBar 1.2s var(--ease) forwards;
+        }
+        @keyframes loadBar { to { width: 100%; } }
+        .preloader-logo {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 2.8rem; font-weight: 900;
+            letter-spacing: 6px; text-transform: uppercase;
+            color: var(--white);
+        }
+        .preloader-logo span { color: var(--gold); }
+        /* ===== NAVBAR ===== */
+        .navbar {
+            position: fixed; top: 0; left: 0; width: 100%;
+            z-index: 1000; padding: 1.4rem 5%;
+            display: flex; align-items: center; justify-content: space-between;
+            transition: var(--transition);
+        }
+        .navbar.scrolled {
+            background: rgba(10,10,10,0.97);
+            backdrop-filter: blur(20px);
+            padding: 0.9rem 5%;
+            border-bottom: 1px solid var(--border);
+        }
+        .logo {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 1.6rem; font-weight: 900;
+            letter-spacing: 3px; text-transform: uppercase;
+            color: var(--white);
+        }
+        .logo span { color: var(--gold); }
+        .nav-links {
+            display: flex; list-style: none; gap: 2.2rem; align-items: center;
+        }
+        .nav-links a {
+            color: var(--white-dim);
+            font-size: 0.78rem; font-weight: 700;
+            letter-spacing: 2px; text-transform: uppercase;
+            transition: var(--transition); position: relative;
+        }
+        .nav-links a::after {
+            content: ''; position: absolute;
+            bottom: -4px; left: 0; width: 0; height: 1px;
+            background: var(--gold); transition: var(--transition);
+        }
+        .nav-links a:hover { color: var(--white); }
+        .nav-links a:hover::after { width: 100%; }
+        .nav-wa {
+            background: transparent !important;
+            border: 1px solid var(--gold) !important;
+            color: var(--gold) !important;
+            padding: 0.5rem 1.2rem;
+            border-radius: var(--radius) !important;
+        }
+        .nav-wa::after { display: none !important; }
+        .nav-wa:hover {
+            background: var(--gold) !important;
+            color: var(--black) !important;
+        }
+        .hamburger { display:none; flex-direction:column; cursor:pointer; gap:5px; }
+        .hamburger span { width:26px; height:2px; background:var(--white); transition:var(--transition); }
+        .hamburger.active span:nth-child(1) { transform:rotate(45deg) translate(5px,5px); }
+        .hamburger.active span:nth-child(2) { opacity:0; }
+        .hamburger.active span:nth-child(3) { transform:rotate(-45deg) translate(5px,-5px); }
+
+        /* ===== HERO ===== */
+        #hero {
+            position: relative; width: 100%; height: 100vh;
+            overflow: hidden; background: var(--black);
+        }
+        #three-container { position:absolute; inset:0; }
+        .hero-overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(160deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.82) 100%);
+            z-index: 2;
+        }
+        .hero-content {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%,-50%);
+            z-index: 3; text-align: center; width: 90%; max-width: 860px;
+            padding-bottom: 4rem;
+        }
+        .hero-eyebrow {
+            display: inline-flex; align-items: center; gap: 10px;
+            color: var(--gold); font-size: 0.75rem; font-weight: 700;
+            letter-spacing: 4px; text-transform: uppercase; margin-bottom: 1.6rem;
+        }
+        .hero-eyebrow::before, .hero-eyebrow::after {
+            content: ''; display: block; width: 40px; height: 1px; background: var(--gold);
+        }
+        .hero-content h1 {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: clamp(2.2rem, 5.5vw, 5rem);
+            font-weight: 900; line-height: 1.05;
+            text-transform: uppercase; letter-spacing: -1px;
+            margin-bottom: 1.2rem;
+        }
+        .hero-content h1 em {
+            font-style: normal; color: var(--gold);
+            display: block; line-height: 1;
+        }
+        .hero-content p {
+            font-size: clamp(0.95rem, 1.8vw, 1.15rem);
+            color: var(--white-dim); max-width: 560px;
+            margin: 0 auto 2.5rem; line-height: 1.8; font-weight: 400;
+        }
+        .hero-buttons { display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; }
+        .btn-gold {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 0.85rem 2rem;
+            background: var(--gold); color: var(--black);
+            font-size: 0.8rem; font-weight: 800;
+            letter-spacing: 2px; text-transform: uppercase;
+            border: none; border-radius: var(--radius);
+            cursor: pointer; transition: var(--transition);
+        }
+        .btn-gold:hover { background: var(--gold-light); transform: translateY(-3px); box-shadow: var(--shadow-gold); }
+        .btn-outline {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 0.85rem 2rem;
+            background: transparent; color: var(--white);
+            font-size: 0.8rem; font-weight: 800;
+            letter-spacing: 2px; text-transform: uppercase;
+            border: 1px solid var(--white-faint);
+            border-radius: var(--radius); cursor: pointer; transition: var(--transition);
+        }
+        .btn-outline:hover { border-color: var(--gold); color: var(--gold); transform: translateY(-3px); }
+        .hero-scroll {
+            position:absolute; bottom:1.8rem; left:50%; transform:translateX(-50%);
+            z-index:3; display:flex; flex-direction:column; align-items:center; gap:6px;
+            color: var(--white-dim); font-size:0.62rem; letter-spacing:3px; text-transform:uppercase;
+            pointer-events: none;
+        }
+        .scroll-line {
+            width:1px; height:50px;
+            background: linear-gradient(var(--gold), transparent);
+            animation: scrollLine 2s ease-in-out infinite;
+        }
+        @keyframes scrollLine { 0%,100%{transform:scaleY(1);opacity:1} 50%{transform:scaleY(0.5);opacity:0.4} }
+        /* ===== SECTION COMMON ===== */
+        section { padding: 7rem 5%; }
+        .s-eyebrow {
+            display: inline-flex; align-items: center; gap: 12px;
+            font-size: 0.72rem; font-weight: 700; letter-spacing: 4px;
+            text-transform: uppercase; color: var(--gold); margin-bottom: 1rem;
+        }
+        .s-eyebrow::before {
+            content:''; display:block; width:30px; height:1px; background:var(--gold);
+        }
+        .s-title {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: clamp(2.2rem, 5vw, 4rem);
+            font-weight: 900; text-transform: uppercase;
+            line-height: 0.95; letter-spacing: -0.5px;
+            margin-bottom: 1.2rem;
+        }
+        .s-sub {
+            color: var(--white-dim); font-size: 1rem;
+            line-height: 1.8; max-width: 560px;
+        }
+        .text-center { text-align: center; }
+        .mx-auto { margin-left:auto; margin-right:auto; }
+
+        /* ===== MARQUEE STRIP ===== */
+        .marquee-strip {
+            background: var(--gold);
+            padding: 0.9rem 0; overflow: hidden;
+            white-space: nowrap;
+        }
+        .marquee-track {
+            display: inline-block;
+            animation: marquee 20s linear infinite;
+        }
+        .marquee-track span {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 0.9rem; font-weight: 800;
+            letter-spacing: 3px; text-transform: uppercase;
+            color: var(--black); padding: 0 2rem;
+        }
+        .marquee-track span::before {
+            content: 'â˜…'; margin-right: 1rem; opacity: 0.6;
+        }
+        @keyframes marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+
+        /* ===== ABOUT ===== */
+        #about { background: var(--black-2); }
+        .about-grid {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 5rem; align-items: center;
+            max-width: 1200px; margin: 0 auto;
+        }
+        .about-visual {
+            position: relative; border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+        .about-visual img {
+            width: 100%; height: 500px; object-fit: cover;
+            transition: transform 0.8s var(--ease);
+        }
+        .about-visual:hover img { transform: scale(1.04); }
+        .about-visual-overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 50%);
+        }
+        .about-badge {
+            position: absolute; bottom: 2rem; left: 2rem;
+            border-left: 3px solid var(--gold); padding-left: 1rem;
+        }
+        .about-badge h3 {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 3rem; font-weight: 900; color: var(--white); line-height:1;
+        }
+        .about-badge p { color: var(--gold); font-size: 0.85rem; font-weight: 600; letter-spacing:2px; text-transform:uppercase; }
+        .about-text h2 {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: clamp(2rem, 3.5vw, 3rem);
+            font-weight: 900; text-transform: uppercase; margin-bottom: 1.2rem;
+        }
+        .about-text p { color: var(--white-dim); line-height:1.85; margin-bottom:1.2rem; font-size:0.97rem; }
+        .about-divider { width:50px; height:2px; background:var(--gold); margin:1.5rem 0; }
+        .about-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:1.5rem; margin-top:2rem; }
+        .stat-item {
+            padding: 1.5rem 1rem;
+            border: 1px solid var(--border);
+            border-top: 2px solid var(--gold);
+            background: var(--black-3);
+            text-align: center;
+            transition: var(--transition);
+            border-radius: var(--radius);
+        }
+        .stat-item:hover { transform:translateY(-6px); border-top-color: var(--gold-light); }
+        .stat-item h4 {
+            font-family:'Barlow Condensed',sans-serif;
+            font-size: 2.4rem; font-weight:900; color:var(--gold);
+        }
+        .stat-item p { font-size:0.75rem; color:var(--white-dim); letter-spacing:1px; text-transform:uppercase; margin-top:4px; }
+        /* ===== PRODUCTS ===== */
+        #products { background: var(--black); }
+        .products-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(270px,1fr));
+            gap: 1.5px; max-width: 1200px; margin: 4rem auto 0;
+        }
+        .product-card {
+            background: var(--black-3);
+            border: 1px solid var(--border);
+            overflow: hidden; position: relative;
+            transition: var(--transition); cursor: pointer;
+            border-radius: var(--radius);
+        }
+        .product-card::after {
+            content:''; position:absolute; bottom:0; left:0;
+            width:0; height:2px; background:var(--gold);
+            transition: width 0.5s var(--ease);
+        }
+        .product-card:hover::after { width:100%; }
+        .product-card:hover { background: var(--black-4); transform: translateY(-4px); box-shadow: var(--shadow-dark); }
+        .card-img {
+            height: 200px; background: var(--black-2);
+            display:flex; align-items:center; justify-content:center;
+            position:relative; overflow:hidden;
+        }
+        .card-img::before {
+            content:''; position:absolute; inset:0;
+            background: radial-gradient(circle at center, rgba(201,168,76,0.08), transparent 70%);
+        }
+        .card-img i { font-size:4.5rem; color:var(--gold); transition: var(--transition); opacity:0.85; }
+        .product-card:hover .card-img i { transform:scale(1.15); opacity:1; }
+        .card-badge {
+            position:absolute; top:1rem; left:1rem;
+            background:var(--gold); color:var(--black);
+            padding:0.25rem 0.7rem;
+            font-size:0.68rem; font-weight:800;
+            letter-spacing:2px; text-transform:uppercase;
+            border-radius: var(--radius);
+        }
+        .card-body { padding: 1.5rem; }
+        .card-body h3 { font-size:1.1rem; font-weight:700; margin-bottom:0.5rem; text-transform:uppercase; letter-spacing:0.5px; }
+        .card-body p { color:var(--white-dim); font-size:0.88rem; line-height:1.65; margin-bottom:1.2rem; }
+        .card-footer { display:flex; justify-content:space-between; align-items:center; }
+        .card-footer .price { font-family:'Barlow Condensed',sans-serif; font-size:1.5rem; font-weight:900; color:var(--gold); }
+        .card-footer .price small { font-size:0.75rem; font-weight:400; color:var(--white-dim); font-family:'Barlow',sans-serif; }
+        .btn-detail {
+            padding:0.45rem 1.1rem;
+            border:1px solid var(--gold); background:transparent;
+            color:var(--gold); font-size:0.72rem; font-weight:700;
+            letter-spacing:1.5px; text-transform:uppercase;
+            cursor:pointer; transition:var(--transition);
+            border-radius:var(--radius);
+            display:inline-flex; align-items:center; gap:6px;
+        }
+        .btn-detail:hover { background:var(--gold); color:var(--black); }
+
+        /* ===== SERVICES ===== */
+        #services { background: var(--black-2); }
+        .services-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(320px,1fr));
+            gap: 1px; max-width: 1200px; margin: 4rem auto 0;
+            border: 1px solid var(--border);
+        }
+        .service-card {
+            padding: 2.8rem 2.2rem; background: var(--black-2);
+            border: 1px solid var(--border);
+            transition: var(--transition); position: relative; overflow: hidden;
+        }
+        .service-card::before {
+            content:''; position:absolute; top:0; left:0;
+            width:100%; height:0;
+            background: linear-gradient(180deg, rgba(201,168,76,0.05), transparent);
+            transition: height 0.5s var(--ease);
+        }
+        .service-card:hover::before { height:100%; }
+        .service-card:hover { background: var(--black-3); transform: translateY(-4px); box-shadow: var(--shadow-dark); }
+        .service-icon {
+            width:56px; height:56px;
+            border: 1px solid var(--gold);
+            display:flex; align-items:center; justify-content:center;
+            margin-bottom:1.5rem;
+            border-radius: var(--radius);
+            transition: var(--transition);
+        }
+        .service-card:hover .service-icon { background:var(--gold); }
+        .service-icon i { font-size:1.5rem; color:var(--gold); transition:var(--transition); }
+        .service-card:hover .service-icon i { color:var(--black); }
+        .service-card h3 { font-size:1.1rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:0.8rem; }
+        .service-card p { color:var(--white-dim); font-size:0.9rem; line-height:1.75; }
+        .service-num {
+            position:absolute; top:1.5rem; right:1.5rem;
+            font-family:'Barlow Condensed',sans-serif;
+            font-size:3.5rem; font-weight:900;
+            color:rgba(255,255,255,0.03); line-height:1;
+        }
+        /* ===== CONFIGURATOR ===== */
+        #configurator {
+            background: var(--black);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+        .configurator-container {
+            display: grid; grid-template-columns: 1.3fr 0.7fr;
+            gap: 0; max-width: 1200px; margin: 4rem auto 0;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg); overflow: hidden;
+        }
+        .configurator-viewer {
+            position:relative; background: #080c14;
+            min-height: 500px;
+            display:flex; align-items:center; justify-content:center;
+        }
+        #configurator-canvas { width:100%; height:100%; position:absolute; inset:0; }
+        #configurator-canvas canvas { width:100% !important; height:100% !important; display:block; }
+        .viewer-instructions {
+            position:absolute; top:1.2rem; left:1.2rem;
+            background:rgba(0,0,0,0.7); backdrop-filter:blur(10px);
+            padding:0.5rem 1rem; color:var(--white-dim);
+            font-size:0.75rem; letter-spacing:1px;
+            border:1px solid var(--border); border-radius:var(--radius);
+            display:flex; align-items:center; gap:8px; z-index:5;
+            pointer-events:none;
+        }
+        .viewer-instructions i { color:var(--gold); }
+        .viewer-reset-btn {
+            position: absolute; bottom: 1.2rem; right: 1.2rem; z-index: 5;
+            width: 40px; height: 40px;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(10px);
+            border: 1px solid var(--gold); color: var(--gold);
+            border-radius: var(--radius); font-size: 1rem; cursor: pointer;
+            transition: var(--transition);
+        }
+        .viewer-reset-btn:hover { background: var(--gold); color: var(--black); }
+        .configurator-controls {
+            padding: 2.5rem; background: var(--black-3);
+            border-left: 1px solid var(--border);
+            display: flex; flex-direction: column; gap: 1.6rem;
+        }
+        .ctrl-heading {
+            font-family:'Barlow Condensed',sans-serif;
+            font-size:1.3rem; font-weight:900; text-transform:uppercase;
+            letter-spacing:2px; border-bottom:1px solid var(--border);
+            padding-bottom:1rem; color:var(--white);
+        }
+        .ctrl-heading i { color:var(--gold); margin-right:8px; }
+        .control-group { display:flex; flex-direction:column; gap:0.5rem; }
+        .control-label { display:flex; justify-content:space-between; font-size:0.8rem; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:var(--white-dim); }
+        .control-label .val { color:var(--gold); font-family:monospace; font-size:0.95rem; }
+        .range-slider {
+            -webkit-appearance:none; width:100%; height:3px;
+            background: var(--border); outline:none;
+        }
+        .range-slider::-webkit-slider-thumb {
+            -webkit-appearance:none; width:16px; height:16px;
+            border-radius:50%; background:var(--gold); cursor:pointer;
+            border:2px solid var(--black); box-shadow:0 0 8px var(--gold);
+            transition:transform 0.2s;
+        }
+        .range-slider::-webkit-slider-thumb:hover { transform:scale(1.3); }
+        .select-input {
+            width:100%; padding:0.7rem 1rem;
+            border:1px solid var(--border); background:var(--black-4);
+            color:var(--white); font-size:0.85rem; outline:none;
+            cursor:pointer; transition:var(--transition);
+            border-radius:var(--radius);
+        }
+        .select-input:focus { border-color:var(--gold); }
+        .select-input option { background:var(--black-3); }
+        .calc-dashboard {
+            background:var(--black-4); border:1px solid rgba(201,168,76,0.2);
+            border-left:2px solid var(--gold);
+            padding:1.3rem; display:flex; flex-direction:column; gap:0.8rem;
+            border-radius:var(--radius);
+        }
+        .calc-head { font-size:0.7rem; font-weight:800; letter-spacing:3px; text-transform:uppercase; color:var(--gold); margin-bottom:0.3rem; }
+        .calc-row { display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; color:var(--white-dim); }
+        .calc-row .val { color:var(--white); font-weight:700; }
+        .calc-total { border-top:1px solid var(--border); padding-top:0.8rem; display:flex; justify-content:space-between; align-items:center; }
+        .calc-total .label { font-size:0.75rem; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--gold); }
+        .calc-total .price-val { font-family:'Barlow Condensed',sans-serif; font-size:1.6rem; font-weight:900; color:#4ade80; }
+        .btn-order-spec {
+            width:100%; padding:1rem;
+            border:none; background:linear-gradient(135deg,#25D366,#1ebd54);
+            color:var(--white); font-size:0.8rem; font-weight:800;
+            letter-spacing:2px; text-transform:uppercase;
+            cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+            box-shadow:0 8px 30px rgba(37,211,102,0.2);
+            transition:var(--transition); border-radius:var(--radius);
+        }
+        .btn-order-spec:hover { transform:translateY(-3px); box-shadow:0 14px 40px rgba(37,211,102,0.35); }
+        /* ===== PROJECTS ===== */
+        #projects { background: var(--black-2); }
+        .projects-grid {
+            display:grid; grid-template-columns:repeat(3,1fr);
+            gap:2px; max-width:1200px; margin:4rem auto 0;
+        }
+        .project-item {
+            position:relative; overflow:hidden; height:280px; cursor:pointer;
+        }
+        .project-item .project-placeholder {
+            width:100%; height:100%;
+            display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1rem;
+            background:var(--black-3); transition:transform 0.7s var(--ease);
+        }
+        .project-item:hover .project-placeholder { transform:scale(1.06); }
+        .project-item .project-placeholder i { font-size:3.5rem; color:var(--gold); opacity:0.7; }
+        .project-item .project-placeholder h4 { font-size:1rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--white); text-align:center; padding:0 1rem; }
+        .project-item .project-placeholder p { font-size:0.78rem; color:var(--white-dim); text-align:center; }
+        .project-item .overlay {
+            position:absolute; inset:0;
+            background:linear-gradient(transparent 30%, rgba(0,0,0,0.9) 100%);
+            display:flex; flex-direction:column; justify-content:flex-end;
+            padding:1.8rem; opacity:0; transition:var(--transition);
+        }
+        .project-item:hover .overlay { opacity:1; }
+        .overlay h4 { font-size:1rem; font-weight:700; text-transform:uppercase; margin-bottom:0.3rem; }
+        .overlay p { font-size:0.78rem; color:var(--gold); letter-spacing:1px; }
+        .overlay-line { width:30px; height:2px; background:var(--gold); margin-bottom:0.7rem; }
+
+        /* ===== TESTIMONIALS ===== */
+        #testimonials { background: var(--black); }
+        .testimonial-slider { max-width:780px; margin:4rem auto 0; position:relative; overflow:hidden; }
+        .testimonial-track { display:flex; transition:transform 0.6s var(--ease); }
+        .testimonial-card { min-width:100%; padding:0 0.5rem; }
+        .testimonial-inner {
+            background:var(--black-2); padding:3rem;
+            border:1px solid var(--border); border-top:2px solid var(--gold);
+            position:relative; border-radius:var(--radius-lg);
+        }
+        .quote-mark {
+            font-family:'Barlow Condensed',sans-serif;
+            font-size:8rem; font-weight:900; color:var(--gold);
+            opacity:0.08; position:absolute; top:-0.5rem; left:2rem; line-height:1;
+        }
+        .stars { color:var(--gold); font-size:1rem; margin-bottom:1.2rem; letter-spacing:2px; }
+        .testimonial-inner > p {
+            color:var(--white-dim); line-height:1.9; font-size:1rem;
+            font-style:italic; margin-bottom:2rem; position:relative; z-index:1;
+        }
+        .author { display:flex; align-items:center; gap:1rem; }
+        .author .avatar {
+            width:48px; height:48px; border-radius:50%;
+            background:var(--gold); color:var(--black);
+            display:flex; align-items:center; justify-content:center;
+            font-size:1.1rem; font-weight:900; flex-shrink:0;
+        }
+        .author h5 { font-size:0.9rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; }
+        .author span { font-size:0.78rem; color:var(--gold); font-weight:600; display:block; margin-top:2px; }
+        .testimonial-controls { display:flex; justify-content:center; gap:1rem; margin-top:2rem; }
+        .testimonial-controls button {
+            width:44px; height:44px; border-radius:50%;
+            border:1px solid var(--border); background:var(--black-2);
+            color:var(--white); font-size:0.9rem; cursor:pointer; transition:var(--transition);
+        }
+        .testimonial-controls button:hover { background:var(--gold); border-color:var(--gold); color:var(--black); }
+        .testimonial-dots { display:flex; justify-content:center; gap:8px; margin-top:1.5rem; }
+        .t-dot {
+            width:6px; height:6px; border-radius:50%; background:var(--border);
+            cursor:pointer; transition:var(--transition);
+        }
+        .t-dot.active { background:var(--gold); width:20px; border-radius:3px; }
+        /* ===== CONTACT ===== */
+        #contact { background: var(--black-2); }
+        .contact-grid {
+            display:grid; grid-template-columns:1fr 1fr;
+            gap:5rem; max-width:1200px; margin:0 auto;
+        }
+        .contact-info h2 {
+            font-family:'Barlow Condensed',sans-serif;
+            font-size:clamp(2rem,4vw,3.5rem); font-weight:900;
+            text-transform:uppercase; line-height:0.95; margin-bottom:1.5rem;
+        }
+        .contact-info > p { color:var(--white-dim); line-height:1.85; margin-bottom:2.5rem; font-size:0.97rem; }
+        .contact-details { display:flex; flex-direction:column; gap:1.2rem; }
+        .contact-detail-item { display:flex; align-items:flex-start; gap:1.2rem; }
+        .icon-box {
+            width:44px; height:44px; flex-shrink:0;
+            border:1px solid rgba(201,168,76,0.3);
+            display:flex; align-items:center; justify-content:center;
+            color:var(--gold); font-size:1rem;
+            border-radius:var(--radius);
+        }
+        .contact-detail-item h5 { font-size:0.72rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--white-dim); margin-bottom:3px; }
+        .contact-detail-item p { font-size:0.95rem; color:var(--white); font-weight:500; margin-bottom:0 !important; }
+        .contact-form {
+            background:var(--black-3); padding:2.8rem;
+            border:1px solid var(--border); border-top:2px solid var(--gold);
+            border-radius:var(--radius-lg);
+        }
+        .contact-form h3 { font-family:'Barlow Condensed',sans-serif; font-size:1.5rem; font-weight:900; text-transform:uppercase; letter-spacing:2px; margin-bottom:1.8rem; }
+        .form-group { margin-bottom:1rem; }
+        .form-group input, .form-group textarea, .form-group select {
+            width:100%; padding:0.85rem 1.1rem;
+            border:1px solid var(--border); background:var(--black-4);
+            color:var(--white); font-family:'Barlow',sans-serif; font-size:0.9rem;
+            transition:var(--transition); border-radius:var(--radius); outline:none;
+        }
+        .form-group input::placeholder, .form-group textarea::placeholder { color:rgba(255,255,255,0.3); }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color:var(--gold); background:rgba(201,168,76,0.04); }
+        .form-group textarea { height:120px; resize:vertical; }
+        .form-group select option { background:var(--black-3); }
+        .btn-submit {
+            width:100%; padding:1rem; border:none;
+            background:var(--gold); color:var(--black);
+            font-size:0.78rem; font-weight:800; letter-spacing:2.5px; text-transform:uppercase;
+            cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+            transition:var(--transition); border-radius:var(--radius);
+        }
+        .btn-submit:hover { background:var(--gold-light); transform:translateY(-3px); box-shadow:var(--shadow-gold); }
+
+        /* ===== FLOAT WA ===== */
+        .float-wa {
+            position:fixed; bottom:2rem; right:2rem;
+            width:58px; height:58px; border-radius:50%;
+            background:#25D366; color:var(--white); font-size:1.7rem;
+            display:flex; align-items:center; justify-content:center;
+            z-index:999; transition:var(--transition);
+            box-shadow:0 8px 30px rgba(37,211,102,0.4);
+            animation:waPulse 2.5s ease-in-out infinite;
+        }
+        .float-wa:hover { transform:scale(1.12); }
+        @keyframes waPulse {
+            0%,100%{box-shadow:0 8px 30px rgba(37,211,102,0.4)}
+            50%{box-shadow:0 8px 50px rgba(37,211,102,0.7)}
+        }
+
+        /* ===== FOOTER ===== */
+        footer { background:var(--black); border-top:1px solid var(--border); padding:5rem 5% 2rem; }
+        .footer-grid { display:grid; grid-template-columns:2fr 1fr 1fr 1.5fr; gap:3rem; max-width:1200px; margin:0 auto 3rem; }
+        .footer-brand h3 { font-family:'Barlow Condensed',sans-serif; font-size:1.6rem; font-weight:900; text-transform:uppercase; letter-spacing:3px; color:var(--white); margin-bottom:1rem; }
+        .footer-brand h3 span { color:var(--gold); }
+        .footer-brand p { color:var(--white-dim); line-height:1.75; font-size:0.9rem; margin-bottom:1.5rem; }
+        .footer-social { display:flex; gap:0.7rem; }
+        .footer-social a {
+            width:38px; height:38px; border-radius:var(--radius);
+            border:1px solid var(--border);
+            display:flex; align-items:center; justify-content:center;
+            color:var(--white-dim); transition:var(--transition);
+        }
+        .footer-social a:hover { border-color:var(--gold); color:var(--gold); transform:translateY(-3px); }
+        .footer-col h4 { font-size:0.75rem; font-weight:800; letter-spacing:3px; text-transform:uppercase; color:var(--white); margin-bottom:1.5rem; padding-bottom:0.8rem; border-bottom:1px solid var(--border); }
+        .footer-col ul { list-style:none; display:flex; flex-direction:column; gap:0.7rem; }
+        .footer-col ul a { color:var(--white-dim); font-size:0.88rem; transition:var(--transition); }
+        .footer-col ul a:hover { color:var(--gold); padding-left:6px; }
+        .footer-bottom { border-top:1px solid var(--border); padding-top:1.5rem; text-align:center; color:var(--white-dim); font-size:0.82rem; max-width:1200px; margin:0 auto; }
+        .footer-bottom span { color:var(--gold); }
+        /* ===== SCROLL REVEAL ANIMATIONS ===== */
+        .reveal {
+            opacity: 0; transform: translateY(50px);
+            transition: opacity 0.8s var(--ease), transform 0.8s var(--ease);
+        }
+        .reveal.reveal-left { transform: translateX(-60px); }
+        .reveal.reveal-right { transform: translateX(60px); }
+        .reveal.active { opacity:1; transform:translate(0,0); }
+        .reveal-delay-1 { transition-delay:0.1s; }
+        .reveal-delay-2 { transition-delay:0.2s; }
+        .reveal-delay-3 { transition-delay:0.3s; }
+        .reveal-delay-4 { transition-delay:0.4s; }
+        .reveal-delay-5 { transition-delay:0.5s; }
+        .reveal-delay-6 { transition-delay:0.6s; }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width:1024px) {
+            .about-grid { grid-template-columns:1fr; gap:3rem; }
+            .contact-grid { grid-template-columns:1fr; }
+            .footer-grid { grid-template-columns:1fr 1fr; }
+            .projects-grid { grid-template-columns:1fr 1fr; }
+            .configurator-container { grid-template-columns:1fr; }
+        }
+        @media (max-width:768px) {
+            section { padding:5rem 5%; }
+            .nav-links {
+                position:fixed; top:0; right:-100%;
+                width:280px; height:100vh;
+                background:rgba(10,10,10,0.98); backdrop-filter:blur(20px);
+                flex-direction:column; padding:5rem 2rem; gap:1.5rem;
+                transition:var(--transition); border-left:1px solid var(--border);
+            }
+            .nav-links.active { right:0; }
+            .hamburger { display:flex; }
+            .footer-grid { grid-template-columns:1fr; gap:2rem; }
+            .projects-grid { grid-template-columns:1fr; }
+            .about-stats { grid-template-columns:repeat(3,1fr); }
+            .contact-form { padding:1.8rem; }
+            .products-grid { grid-template-columns:1fr; }
+            .services-grid { grid-template-columns:1fr; }
+        }
+        @media (max-width:480px) {
+            .hero-buttons { flex-direction:column; align-items:center; }
+            .hero-buttons .btn-gold, .hero-buttons .btn-outline { width:100%; justify-content:center; }
+            .about-stats { grid-template-columns:1fr; }
+            .projects-grid { grid-template-columns:1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- PRELOADER -->
+    <div id="preloader">
+        <div class="preloader-inner">
+            <div class="preloader-logo">Baja<span>Ringan</span>Ku</div>
+            <div class="preloader-bar"><div class="preloader-bar-fill"></div></div>
+        </div>
+    </div>
+
+    <!-- NAVBAR -->
+    <nav class="navbar" id="navbar">
+        <div class="logo">Baja<span>Ringan</span>Ku</div>
+        <ul class="nav-links" id="navLinks">
+            <li><a href="#hero">Beranda</a></li>
+            <li><a href="#about">Tentang</a></li>
+            <li><a href="#products">Produk</a></li>
+            <li><a href="#services">Layanan</a></li>
+            <li><a href="#configurator">Desain 3D</a></li>
+            <li><a href="#projects">Proyek</a></li>
+            <li><a href="#contact">Kontak</a></li>
+            <li><a href="https://wa.me/6288219640526?text=Halo%20BajaRinganKu%2C%20saya%20tertarik%20dengan%20produk%20Anda" class="nav-wa" target="_blank"><i class="fab fa-whatsapp"></i> Hubungi WA</a></li>
+        </ul>
+        <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+    </nav>
+
+    <!-- HERO -->
+    <section id="hero">
+        <div id="three-container"></div>
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <div class="hero-eyebrow">Spesialis Baja Ringan</div>
+            <h1>Bangun Impian Anda<br>dengan <em>Baja Ringan</em><br>Berkualitas</h1>
+            <p>Solusi konstruksi modern yang kuat, tahan lama, dan hemat biaya. Dapatkan konsultasi gratis untuk proyek Anda bersama tim ahli kami.</p>
+            <div class="hero-buttons">
+                <a href="#products" class="btn-gold"><i class="fas fa-box"></i> Lihat Produk</a>
+                <a href="https://wa.me/6288219640526?text=Halo%20BajaRinganKu%2C%20saya%20mau%20konsultasi%20gratis" target="_blank" class="btn-outline"><i class="fab fa-whatsapp"></i> Konsultasi Gratis</a>
+            </div>
+        </div>
+        <div class="hero-scroll">
+            <span>Scroll</span>
+            <div class="scroll-line"></div>
+        </div>
+    </section>
+
+    <!-- MARQUEE STRIP -->
+    <div class="marquee-strip" aria-hidden="true">
+        <div class="marquee-track">
+            <span>Truss C75</span><span>Reng R33</span><span>Baut SDS</span><span>Genteng Metal</span>
+            <span>Konsultasi Gratis</span><span>Pengiriman Cepat</span><span>Garansi Resmi</span><span>10+ Tahun Pengalaman</span>
+            <span>Truss C75</span><span>Reng R33</span><span>Baut SDS</span><span>Genteng Metal</span>
+            <span>Konsultasi Gratis</span><span>Pengiriman Cepat</span><span>Garansi Resmi</span><span>10+ Tahun Pengalaman</span>
+        </div>
+    </div>
+
+    <!-- ABOUT -->
+    <section id="about">
+        <div class="about-grid">
+            <div class="about-visual reveal reveal-left">
+                <img src="https://images.unsplash.com/photo-1613665813446-82a78c468a1d?w=800&q=80" alt="Konstruksi Baja Ringan" loading="lazy">
+                <div class="about-visual-overlay"></div>
+                <div class="about-badge">
+                    <h3>10+</h3>
+                    <p>Tahun Pengalaman</p>
+                </div>
+            </div>
+            <div class="about-text reveal reveal-right">
+                <div class="s-eyebrow">Tentang Kami</div>
+                <h2>Mitra Terpercaya untuk Konstruksi Baja Ringan</h2>
+                <div class="about-divider"></div>
+                <p>BajaRinganKu adalah toko spesialis baja ringan yang telah berpengalaman lebih dari 10 tahun dalam menyediakan material konstruksi berkualitas tinggi. Kami berkomitmen memberikan solusi terbaik untuk setiap proyek, dari rumah tinggal hingga gedung bertingkat.</p>
+                <p>Dengan jaringan supplier terpercaya dan tim profesional, kami menjamin produk berkualitas dengan harga kompetitif serta pengiriman tepat waktu.</p>
+                <div class="about-stats">
+                    <div class="stat-item reveal reveal-delay-1">
+                        <h4 data-count="500">0</h4>
+                        <p>Proyek Selesai</p>
+                    </div>
+                    <div class="stat-item reveal reveal-delay-2">
+                        <h4 data-count="50">0</h4>
+                        <p>Produk Tersedia</p>
+                    </div>
+                    <div class="stat-item reveal reveal-delay-3">
+                        <h4 data-count="98">0</h4>
+                        <p>% Kepuasan Klien</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PRODUCTS -->
+    <section id="products">
+        <div class="text-center">
+            <div class="s-eyebrow mx-auto" style="justify-content:center;">Katalog Produk</div>
+            <h2 class="s-title reveal">Produk Baja Ringan<br>Lengkap & Berkualitas</h2>
+            <p class="s-sub mx-auto reveal" style="margin-top:0.8rem;">Berbagai pilihan produk baja ringan dari merek terkemuka dengan harga terbaik untuk proyek Anda.</p>
+        </div>
+        <div class="products-grid" id="productsGrid"></div>
+    </section>
+
+    <!-- SERVICES -->
+    <section id="services">
+        <div class="text-center">
+            <div class="s-eyebrow mx-auto" style="justify-content:center;">Layanan Kami</div>
+            <h2 class="s-title reveal">Layanan Profesional<br>Untuk Kebutuhan Anda</h2>
+            <p class="s-sub mx-auto reveal" style="margin-top:0.8rem;">Dari konsultasi hingga pemasangan, tim ahli kami siap membantu setiap tahap proyek Anda.</p>
+        </div>
+        <div class="services-grid" style="max-width:1200px;margin:4rem auto 0;">
+            <!-- Diisi oleh JS dari localStorage admin -->
+        </div>
+    </section>
+
+    <!-- CONFIGURATOR -->
+    <section id="configurator">
+        <div class="text-center">
+            <div class="s-eyebrow mx-auto" style="justify-content:center;color:var(--gold);">Simulator 3D</div>
+            <h2 class="s-title reveal">Rancang Atap Baja Ringan Anda</h2>
+            <p class="s-sub mx-auto reveal" style="margin-top:0.8rem;color:var(--white-dim);">Konfigurasikan ukuran atap bangunan Anda secara interaktif. Dapatkan estimasi material dan biaya secara real-time.</p>
+        </div>
+        <div class="configurator-container reveal">
+            <div class="configurator-viewer">
+                <div class="viewer-instructions">
+                    <i class="fas fa-sync-alt fa-spin"></i>
+                    <span>Klik & Seret untuk memutar 3D. Scroll untuk Zoom.</span>
+                </div>
+                <button class="viewer-reset-btn" onclick="resetConfigView()" title="Reset tampilan kamera">
+                    <i class="fas fa-expand-arrows-alt"></i>
+                </button>
+                <div id="configurator-canvas"></div>
+            </div>
+            <div class="configurator-controls">
+                <div class="ctrl-heading"><i class="fas fa-sliders-h"></i> Parameter Atap</div>
+                <div class="control-group">
+                    <div class="control-label"><span>Bentang Atap (Lebar)</span><span class="val" id="val-bentang">6.0 m</span></div>
+                    <input type="range" min="4" max="15" step="0.5" value="6" class="range-slider" id="param-bentang">
+                </div>
+                <div class="control-group">
+                    <div class="control-label"><span>Tinggi Kuda-Kuda</span><span class="val" id="val-tinggi">1.8 m</span></div>
+                    <input type="range" min="1" max="4" step="0.1" value="1.8" class="range-slider" id="param-tinggi">
+                </div>
+                <div class="control-group">
+                    <div class="control-label"><span>Panjang Bangunan</span><span class="val" id="val-panjang">10.0 m</span></div>
+                    <input type="range" min="5" max="30" step="1" value="10" class="range-slider" id="param-panjang">
+                </div>
+                <div class="control-group">
+                    <div class="control-label"><span>Jarak Antar Kuda-Kuda</span><span class="val" id="val-jarak">1.2 m</span></div>
+                    <input type="range" min="1.0" max="2.0" step="0.1" value="1.2" class="range-slider" id="param-jarak">
+                </div>
+                <div class="control-group">
+                    <div class="control-label"><span>Jenis Penutup Atap</span></div>
+                    <select class="select-input" id="param-genteng">
+                        <option value="genteng-pasir" data-price="65000">Genteng Metal Pasir (Premium)</option>
+                        <option value="genteng-polos" data-price="48000">Genteng Metal Polos (Ekonomis)</option>
+                        <option value="spandek" data-price="72000">Spandek Galvalum (Industrial)</option>
+                    </select>
+                </div>
+                <div class="calc-dashboard">
+                    <div class="calc-head"><i class="fas fa-calculator"></i> Estimasi Kebutuhan Material</div>
+                    <div class="calc-row"><span>Kanal C75 (6m)</span><span class="val" id="res-c75">0 batang</span></div>
+                    <div class="calc-row"><span>Reng R33 (6m)</span><span class="val" id="res-reng">0 batang</span></div>
+                    <div class="calc-row"><span>Penutup Atap (Lembar)</span><span class="val" id="res-roof">0 lembar</span></div>
+                    <div class="calc-row"><span>Baut SDS & Screw</span><span class="val" id="res-screw">1 Box (500 pcs)</span></div>
+                    <div class="calc-total">
+                        <span class="label">Estimasi Biaya Material</span>
+                        <span class="price-val" id="res-total">Rp 0</span>
+                    </div>
+                </div>
+                <button class="btn-order-spec" onclick="sendCustomDesignWA()">
+                    <i class="fab fa-whatsapp"></i> Ajukan Spek Ini ke WhatsApp
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- PROJECTS -->
+    <section id="projects">
+        <div class="text-center">
+            <div class="s-eyebrow mx-auto" style="justify-content:center;">Galeri Proyek</div>
+            <h2 class="s-title reveal">Proyek yang Telah<br>Kami Kerjakan</h2>
+            <p class="s-sub mx-auto reveal" style="margin-top:0.8rem;">Berikut adalah beberapa proyek yang telah berhasil kami selesaikan dengan kualitas terbaik.</p>
+        </div>
+        <div class="projects-grid" style="max-width:1200px;margin:4rem auto 0;">
+            <!-- Diisi oleh JS dari localStorage admin -->
+        </div>
+    </section>
+
+    <!-- TESTIMONIALS -->
+    <section id="testimonials">
+        <div class="text-center">
+            <div class="s-eyebrow mx-auto" style="justify-content:center;">Testimoni</div>
+            <h2 class="s-title reveal">Apa Kata Klien Kami</h2>
+            <p class="s-sub mx-auto reveal" style="margin-top:0.8rem;">Kepercayaan dan kepuasan Anda adalah prioritas utama kami.</p>
+        </div>
+        <div class="testimonial-slider">
+            <div class="testimonial-track" id="testimonialTrack">
+                <!-- Diisi oleh JS dari localStorage admin -->
+            </div>
+            <div class="testimonial-controls">
+                <button onclick="prevTestimonial()" aria-label="Sebelumnya"><i class="fas fa-arrow-left"></i></button>
+                <button onclick="nextTestimonial()" aria-label="Selanjutnya"><i class="fas fa-arrow-right"></i></button>
+            </div>
+            <div class="testimonial-dots" id="tDots">
+                <!-- Diisi oleh JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- CONTACT -->
+    <section id="contact">
+        <div class="contact-grid">
+            <div class="contact-info reveal reveal-left">
+                <div class="s-eyebrow">Hubungi Kami</div>
+                <h2>Mari Wujudkan Proyek<br>Impian Anda</h2>
+                <p>Hubungi kami untuk konsultasi gratis atau pertanyaan seputar produk dan layanan. Tim kami siap melayani Anda dengan senang hati.</p>
+                <div class="contact-details">
+                    <div class="contact-detail-item">
+                        <div class="icon-box"><i class="fas fa-map-marker-alt"></i></div>
+                        <div><h5>Lokasi</h5><p>Jl. Baja Raya No. 123, Jakarta Pusat, Indonesia 10110</p></div>
+                    </div>
+                    <div class="contact-detail-item">
+                        <div class="icon-box"><i class="fas fa-phone-alt"></i></div>
+                        <div><h5>Telepon</h5><p>(021) 1234-5678</p></div>
+                    </div>
+                    <div class="contact-detail-item">
+                        <div class="icon-box"><i class="fab fa-whatsapp"></i></div>
+                        <div><h5>WhatsApp</h5><p>+62 812-3456-7890</p></div>
+                    </div>
+                    <div class="contact-detail-item">
+                        <div class="icon-box"><i class="fas fa-envelope"></i></div>
+                        <div><h5>Email</h5><p>info@bajaringan.com</p></div>
+                    </div>
+                    <div class="contact-detail-item">
+                        <div class="icon-box"><i class="fas fa-clock"></i></div>
+                        <div><h5>Jam Operasional</h5><p>Senin - Sabtu: 08:00 - 18:00</p></div>
+                    </div>
+                </div>
+            </div>
+            <div class="contact-form reveal reveal-right">
+                <h3>Kirim Pesan Sekarang</h3>
+                <form id="contactForm" onsubmit="handleFormSubmit(event)">
+                    <div class="form-group"><input type="text" placeholder="Nama Lengkap" required></div>
+                    <div class="form-group"><input type="email" placeholder="Email" required></div>
+                    <div class="form-group"><input type="tel" placeholder="Nomor WhatsApp" required></div>
+                    <div class="form-group">
+                        <select>
+                            <option value="">Pilih Kebutuhan</option>
+                            <option>Konsultasi Gratis</option>
+                            <option>Pembelian Produk</option>
+                            <option>Jasa Pemasangan</option>
+                            <option>Lainnya</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><textarea placeholder="Tulis pesan Anda..." required></textarea></div>
+                    <button type="submit" class="btn-submit"><i class="fab fa-whatsapp"></i> Kirim via WhatsApp</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <h3>Baja<span>Ringan</span>Ku</h3>
+                <p>Mitra terpercaya Anda dalam penyediaan material baja ringan berkualitas tinggi untuk konstruksi modern. Pengalaman 10+ tahun melayani ribuan proyek.</p>
+                <div class="footer-social">
+                    <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                    <a href="#" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+                    <a href="#" aria-label="TikTok"><i class="fab fa-tiktok"></i></a>
+                </div>
+            </div>
+            <div class="footer-col">
+                <h4>Menu</h4>
+                <ul>
+                    <li><a href="#hero">Beranda</a></li>
+                    <li><a href="#about">Tentang</a></li>
+                    <li><a href="#products">Produk</a></li>
+                    <li><a href="#services">Layanan</a></li>
+                    <li><a href="#configurator">Desain 3D</a></li>
+                    <li><a href="#projects">Proyek</a></li>
+                    <li><a href="#contact">Kontak</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Produk</h4>
+                <ul>
+                    <li><a href="#">Truss C75/C100</a></li>
+                    <li><a href="#">Reng R33/R30</a></li>
+                    <li><a href="#">Baut & Screw</a></li>
+                    <li><a href="#">Genteng Metal</a></li>
+                    <li><a href="#">Aksesoris</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Layanan</h4>
+                <ul>
+                    <li><a href="#">Konsultasi Gratis</a></li>
+                    <li><a href="#">Hitung RAB Online</a></li>
+                    <li><a href="#">Jasa Pemasangan</a></li>
+                    <li><a href="#">Desain Struktur</a></li>
+                    <li><a href="#">Pengiriman</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 <span>BajaRinganKu</span>. All rights reserved. Dibangun dengan â¤ï¸ untuk konstruksi Indonesia.</p>
+        </div>
+    </footer>
+
+    <!-- FLOAT WA -->
+    <a href="https://wa.me/6288219640526?text=Halo%20BajaRinganKu%2C%20saya%20ada%20pertanyaan" target="_blank" class="float-wa" aria-label="Chat WhatsApp">
+        <i class="fab fa-whatsapp"></i>
+    </a>
+
+    <script>
+    /* ===== FIREBASE CONFIG ===== */
+    const firebaseConfig = {
+        apiKey:            "AIzaSyAqGvU2OP2qw8sCAUdnXFt2OMY1GlUGpLI",
+        authDomain:        "device-streaming-ffad81b3.firebaseapp.com",
+        projectId:         "device-streaming-ffad81b3",
+        storageBucket:     "device-streaming-ffad81b3.firebasestorage.app",
+        messagingSenderId: "997725194181",
+        appId:             "1:997725194181:web:edb9d5adb4401d80c26dac"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const COL = 'brk_store';
+
+    /* ===== LOAD dari Firestore, fallback localStorage lalu DEFAULT ===== */
+    async function brkLoad(key, fallback) {
+        try {
+            const doc = await db.collection(COL).doc(key).get();
+            if (doc.exists && doc.data().data) return doc.data().data;
+        } catch(e) { console.warn('brkLoad error, pakai cache:', key, e); }
+        try {
+            const cached = JSON.parse(localStorage.getItem('brk_' + key));
+            if (cached) return cached;
+        } catch(e) {}
+        return fallback;
+    }
+
+    const DEFAULT_PRODUCTS = [
+        { name:'Truss Baja Ringan C75', desc:'Profil C75 untuk rangka atap utama, kokoh dan anti karat.', icon:'fa-layer-group', price:'Rp 85.000', badge:'Best Seller' },
+        { name:'Truss Baja Ringan C100', desc:'Profil C100 untuk bentang lebar, kekuatan maksimal.', icon:'fa-layer-group', price:'Rp 110.000', badge:'Premium' },
+        { name:'Reng Baja Ringan R33', desc:'Reng R33 untuk pemasangan genteng metal dan multiroof.', icon:'fa-ruler', price:'Rp 45.000', badge:'Populer' },
+        { name:'Reng Baja Ringan R30', desc:'Reng R30 ekonomis dengan kualitas terjamin.', icon:'fa-ruler', price:'Rp 38.000', badge:'Ekonomis' },
+        { name:'Baut SDS / Self Drilling', desc:'Baut khusus baja ringan anti karat berbagai ukuran.', icon:'fa-screwdriver-wrench', price:'Rp 25.000/pack', badge:'Terlaris' },
+        { name:'Genteng Metal Pasir', desc:'Genteng metal berlapis pasir, tahan karat & anti bocor.', icon:'fa-home', price:'Rp 65.000/lembar', badge:'Best Seller' },
+        { name:'Genteng Metal Polos', desc:'Genteng metal polos berkualitas dengan harga ekonomis.', icon:'fa-home', price:'Rp 48.000/lembar', badge:'Ekonomis' },
+        { name:'Kanal C Hi-Tensile', desc:'Kanal C dengan tensile tinggi G550 untuk kekuatan ekstra.', icon:'fa-bolt', price:'Rp 95.000', badge:'Premium' },
+    ];
+    const DEFAULT_GALLERY = [
+        {name:'Rumah Tinggal Modern', year:'Perumahan Graha Estate â€” 2024', img:''},
+        {name:'Gudang Industri', year:'Kawasan Industri Jababeka â€” 2023', img:''},
+        {name:'Masjid & Musholla', year:'Masjid Al-Hidayah â€” 2024', img:''},
+        {name:'Sekolah & Gedung Pendidikan', year:'SMA Negeri 1 â€” 2023', img:''},
+        {name:'Ruko & Pertokoan', year:'Ruko Central Business â€” 2024', img:''},
+        {name:'Gazebo & Carport', year:'Perumahan Green Garden â€” 2024', img:''},
+    ];
+    const DEFAULT_LAYANAN = [
+        {name:'Konsultasi & RAB Gratis', icon:'fa-calculator', desc:'Tim kami siap membantu menghitung kebutuhan material dan RAB secara gratis tanpa syarat.'},
+        {name:'Pengiriman Cepat & Aman', icon:'fa-truck', desc:'Layanan pengiriman ke seluruh wilayah dengan armada sendiri, tepat waktu dan kondisi baik.'},
+        {name:'Jasa Pemasangan', icon:'fa-tools', desc:'Dikerjakan oleh tenaga ahli berpengalaman dengan garansi pemasangan.'},
+        {name:'Desain & Gambar Teknis', icon:'fa-drafting-compass', desc:'Layanan pembuatan gambar teknis dan desain struktur baja ringan oleh arsitek profesional.'},
+        {name:'Garansi Produk', icon:'fa-shield-alt', desc:'Setiap produk dilengkapi garansi resmi dari pabrikan.'},
+        {name:'Dukungan 24/7', icon:'fa-headset', desc:'Tim customer service siap melayani kapan saja melalui telepon, WhatsApp, atau email.'},
+    ];
+    const DEFAULT_TESTI = [
+        {name:'Ahmad Fauzi', role:'Kontraktor, Jakarta', rating:5, text:'Pelayanan sangat memuaskan! Material berkualitas, harga bersaing, dan pengiriman tepat waktu. Sangat merekomendasikan BajaRinganKu untuk kebutuhan konstruksi Anda.'},
+        {name:'Siti Rahmawati', role:'Pemilik Rumah, Bandung', rating:5, text:'Saya sangat terbantu dengan konsultasi gratisnya. Tim BajaRinganKu sangat profesional dan memberikan solusi terbaik untuk rumah saya. Hasilnya rapi dan kokoh!'},
+        {name:'Dwi Prasetyo', role:'Developer Perumahan, Surabaya', rating:5, text:'Sudah 3 kali order di sini, kualitas selalu konsisten. Proses pemesanan mudah, staf ramah, dan pengiriman cepat. Langganan tetap!'},
+    ];
+    const DEFAULT_KONTAK = {wa:'6288219640526', telp:'(021) 1234-5678', email:'info@bajaringan.com', alamat:'Jl. Baja Raya No. 123, Jakarta Pusat, Indonesia 10110', jam:'Senin - Sabtu: 08:00 - 18:00'};
+    const DEFAULT_PROFIL  = {name:'BajaRinganKu', exp:10, project:500, produkCount:50, satisfaction:98, desc:'Mitra terpercaya Anda dalam penyediaan material baja ringan berkualitas tinggi.'};
+
+    // Ambil data â€” dari Firestore, fallback localStorage/default
+    // Dieksekusi async di initSite() setelah DOM ready
+    var siteProducts, siteGallery, siteLayanan, siteTesti, siteKontak, siteProfil;
+
+    function renderProducts(data, kontak) {
+        var grid = document.getElementById('productsGrid');
+        if (!grid) return; grid.innerHTML = '';
+        data.forEach(function(p, i) {
+            var card = document.createElement('div');
+            card.className = 'product-card reveal reveal-delay-' + ((i % 4) + 1);
+            card.innerHTML = '<div class="card-img"><span class="card-badge">' + p.badge + '</span><i class="fas ' + p.icon + '"></i></div>' +
+                '<div class="card-body"><h3>' + p.name + '</h3><p>' + p.desc + '</p>' +
+                '<div class="card-footer"><span class="price">' + p.price + ' <small>/batang</small></span>' +
+                '<a href="https://wa.me/' + kontak.wa + '?text=Halo%20BajaRinganKu%2C%20saya%20tertarik%20dengan%20' + encodeURIComponent(p.name) + '" target="_blank" class="btn-detail"><i class="fab fa-whatsapp"></i> Pesan</a></div></div>';
+            grid.appendChild(card);
+        });
+    }
+    function renderLayanan(data) {
+        var sg = document.querySelector('.services-grid');
+        if (!sg) return; sg.innerHTML = '';
+        data.forEach(function(l, i) {
+            var c = document.createElement('div');
+            c.className = 'service-card reveal reveal-delay-' + ((i % 6) + 1);
+            c.innerHTML = '<span class="service-num">0' + (i+1) + '</span><div class="service-icon"><i class="fas ' + l.icon + '"></i></div><h3>' + l.name + '</h3><p>' + l.desc + '</p>';
+            sg.appendChild(c);
+        });
+    }
+    function renderGallery(data) {
+        var pg = document.querySelector('#projects .projects-grid');
+        if (!pg) return; pg.innerHTML = '';
+        var icons=['fa-building','fa-warehouse','fa-mosque','fa-school','fa-store','fa-umbrella-beach'];
+        var bgs=['#1a1a1a','#222222','#111111','#1e1e1e','#181818','#141414'];
+        data.forEach(function(g, i) {
+            var it = document.createElement('div');
+            it.className = 'project-item reveal reveal-delay-' + ((i % 6) + 1);
+            it.innerHTML = '<div class="project-placeholder" style="background:linear-gradient(135deg,' + bgs[i%bgs.length] + ',#222);position:relative;">' +
+                (g.img ? '<img src="' + g.img + '" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;" onerror="this.style.display=\'none\'">' : '') +
+                '<i class="fas ' + icons[i%icons.length] + '"></i><h4>' + g.name + '</h4><p>' + (g.year||'') + '</p></div>' +
+                '<div class="overlay"><div class="overlay-line"></div><h4>' + g.name + '</h4><p>' + (g.year||'') + '</p></div>';
+            pg.appendChild(it);
+        });
+    }
+    function renderTestimoni(data) {
+        var track = document.getElementById('testimonialTrack');
+        var dots  = document.getElementById('tDots');
+        if (!track || !data || !data.length) return;
+        track.innerHTML = data.map(function(t) {
+            var stars=''; for(var s=0;s<(t.rating||5);s++) stars+='<i class="fas fa-star"></i>';
+            return '<div class="testimonial-card"><div class="testimonial-inner"><div class="quote-mark">"</div><div class="stars">' + stars + '</div><p>"' + t.text + '"</p>' +
+                '<div class="author"><div class="avatar">' + t.name.charAt(0).toUpperCase() + '</div><div><h5>' + t.name + '</h5><span>' + (t.role||'') + '</span></div></div></div></div>';
+        }).join('');
+        if (dots) dots.innerHTML = data.map(function(_,i){ return '<div class="t-dot' + (i===0?' active':'') + '" onclick="goToTestimonial(' + i + ')"></div>'; }).join('');
+        currentTestimonial = 0;
+        if (track) track.style.transform = 'translateX(0)';
+    }
+    function applyKontak(k) {
+        document.querySelectorAll('a[href*="wa.me/"]').forEach(function(a){ a.href=a.href.replace(/wa\.me\/\d+/,'wa.me/'+k.wa); });
+        function st(sel,val){ var e=document.querySelector(sel); if(e&&val) e.textContent=val; }
+        st('.contact-detail-item:nth-child(1) p', k.alamat);
+        st('.contact-detail-item:nth-child(2) p', k.telp);
+        st('.contact-detail-item:nth-child(3) p', '+' + k.wa);
+        st('.contact-detail-item:nth-child(4) p', k.email);
+        st('.contact-detail-item:nth-child(5) p', k.jam);
+    }
+    function applyProfil(pr) {
+        var map = {'10':pr.exp,'500':pr.project,'50':pr.produkCount,'98':pr.satisfaction};
+        Object.keys(map).forEach(function(v){ var e=document.querySelector('[data-count="'+v+'"]'); if(e) e.dataset.count=map[v]; });
+        var fp = document.querySelector('.footer-brand p'); if(fp&&pr.desc) fp.textContent=pr.desc;
+    }
+
+    async function initSite() {
+        var loader = document.createElement('div');
+        loader.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);border:1px solid #c9a84c;color:#c9a84c;padding:0.5rem 1.5rem;border-radius:4px;font-size:0.75rem;font-weight:700;letter-spacing:2px;z-index:9999;transition:opacity 0.5s;';
+        loader.textContent = 'â³ Memuat konten...';
+        document.body.appendChild(loader);
+        try {
+            siteProducts = await brkLoad('products',  DEFAULT_PRODUCTS);
+            siteGallery  = await brkLoad('gallery',   DEFAULT_GALLERY);
+            siteLayanan  = await brkLoad('layanan',   DEFAULT_LAYANAN);
+            siteTesti    = await brkLoad('testimoni', DEFAULT_TESTI);
+            siteKontak   = await brkLoad('kontak',    DEFAULT_KONTAK);
+            siteProfil   = await brkLoad('profil',    DEFAULT_PROFIL);
+        } catch(e) {
+            siteProducts=DEFAULT_PRODUCTS; siteGallery=DEFAULT_GALLERY;
+            siteLayanan=DEFAULT_LAYANAN;   siteTesti=DEFAULT_TESTI;
+            siteKontak=DEFAULT_KONTAK;     siteProfil=DEFAULT_PROFIL;
+        }
+        renderProducts(siteProducts, siteKontak);
+        renderLayanan(siteLayanan);
+        renderGallery(siteGallery);
+        renderTestimoni(siteTesti);
+        applyKontak(siteKontak);
+        applyProfil(siteProfil);
+        // Re-observe elemen reveal baru
+        if (typeof revealObserver !== 'undefined') {
+            document.querySelectorAll('.reveal:not(.active)').forEach(function(el){ revealObserver.observe(el); });
+        }
+        loader.style.opacity = '0';
+        setTimeout(function(){ loader.remove(); }, 500);
+    }
+    document.addEventListener('DOMContentLoaded', function(){ initSite(); });
+
+    /* ===== NAVBAR SCROLL ===== */
+    window.addEventListener('scroll', () => {
+        document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 80);
+    });
+
+    /* ===== HAMBURGER ===== */
+    document.getElementById('hamburger').addEventListener('click', () => {
+        document.getElementById('hamburger').classList.toggle('active');
+        document.getElementById('navLinks').classList.toggle('active');
+    });
+    document.querySelectorAll('.nav-links a').forEach(l => l.addEventListener('click', () => {
+        document.getElementById('hamburger').classList.remove('active');
+        document.getElementById('navLinks').classList.remove('active');
+    }));
+
+    /* ===== SCROLL REVEAL ===== */
+    const revealObserver = new IntersectionObserver((entries) => {
+        entries.forEach(e => { if(e.isIntersecting) { e.target.classList.add('active'); } });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+    /* ===== COUNTER ANIMATION ===== */
+    function animateCounter(el, target, suffix = '') {
+        let start = 0;
+        const duration = 1800;
+        const step = (timestamp) => {
+            if (!start) start = timestamp;
+            const progress = Math.min((timestamp - start) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            el.textContent = Math.floor(eased * target) + suffix;
+            if (progress < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+    }
+    const counterObserver = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+            if (e.isIntersecting) {
+                const el = e.target;
+                const target = parseInt(el.dataset.count);
+                const suffix = el.dataset.suffix || (el.dataset.count == '98' ? '%' : '+');
+                animateCounter(el, target, suffix);
+                counterObserver.unobserve(el);
+            }
+        });
+    }, { threshold: 0.5 });
+    document.querySelectorAll('[data-count]').forEach(el => counterObserver.observe(el));
+
+    /* ===== TESTIMONIAL SLIDER ===== */
+    let currentTestimonial = 0;
+    const track = document.getElementById('testimonialTrack');
+    const totalT = document.querySelectorAll('.testimonial-card').length;
+    const dots = document.querySelectorAll('.t-dot');
+    function updateDots() {
+        dots.forEach((d,i) => d.classList.toggle('active', i === currentTestimonial));
+    }
+    function goToTestimonial(n) {
+        currentTestimonial = n;
+        track.style.transform = `translateX(-${n * 100}%)`;
+        updateDots();
+    }
+    function nextTestimonial() { goToTestimonial((currentTestimonial + 1) % totalT); }
+    function prevTestimonial() { goToTestimonial((currentTestimonial - 1 + totalT) % totalT); }
+    setInterval(nextTestimonial, 5500);
+
+    /* ===== FORM SUBMIT ===== */
+    function handleFormSubmit(e) {
+        e.preventDefault();
+        const f = e.target;
+        const name    = f.querySelector('input[type="text"]').value;
+        const email   = f.querySelector('input[type="email"]').value;
+        const phone   = f.querySelector('input[type="tel"]').value;
+        const need    = f.querySelector('select').value;
+        const message = f.querySelector('textarea').value;
+        const msg = `Halo BajaRinganKu!%0A%0ANama: ${encodeURIComponent(name)}%0AEmail: ${encodeURIComponent(email)}%0AWhatsApp: ${encodeURIComponent(phone)}%0AKebutuhan: ${encodeURIComponent(need)}%0APesan: ${encodeURIComponent(message)}`;
+        const waNum = (siteKontak && siteKontak.wa) ? siteKontak.wa : '6288219640526';
+        window.open(`https://wa.me/${waNum}?text=${msg}`, '_blank');
+    }
+
+    /* ===== PRELOADER ===== */
+    window.addEventListener('load', () => {
+        setTimeout(() => document.getElementById('preloader').classList.add('hidden'), 1200);
+    });
+    </script>
+
+    <script>
+    /* ===== THREE.JS HERO SCENE ===== */
+    function initThreeScene() {
+        const container = document.getElementById('three-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 4, 12);
+        camera.lookAt(0, 0, 0);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.5;
+        container.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0x222244, 0.5));
+        const mainLight = new THREE.DirectionalLight(0xffeedd, 1.5);
+        mainLight.position.set(5, 10, 5); mainLight.castShadow = true; scene.add(mainLight);
+        const fillLight = new THREE.DirectionalLight(0x4488ff, 0.5);
+        fillLight.position.set(-5, 3, -5); scene.add(fillLight);
+        const rimLight = new THREE.DirectionalLight(0xc9a84c, 0.8);
+        rimLight.position.set(-2, 5, -8); scene.add(rimLight);
+
+        const gridHelper = new THREE.GridHelper(15, 15, 0x333322, 0x1a1a11);
+        gridHelper.position.y = -1.5; scene.add(gridHelper);
+
+        const trussGroup = new THREE.Group();
+        function createBeam(start, end, color = 0x88aacc, r = 0.08) {
+            const dir = new THREE.Vector3().subVectors(end, start);
+            const len = dir.length();
+            const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+            const geo = new THREE.CylinderGeometry(r, r, len, 6);
+            const mat = new THREE.MeshStandardMaterial({ color, metalness:0.8, roughness:0.3, emissive:color, emissiveIntensity:0.05 });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.copy(mid);
+            mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir.clone().normalize());
+            mesh.castShadow = true; return mesh;
+        }
+        function createJoint(pos, size = 0.2, color = 0xc9a84c) {
+            const geo = new THREE.SphereGeometry(size, 12, 12);
+            const mat = new THREE.MeshStandardMaterial({ color, metalness:0.9, roughness:0.2, emissive:color, emissiveIntensity:0.12 });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.copy(pos); mesh.castShadow = true; return mesh;
+        }
+        function createTruss(ox, oz, s = 1) {
+            const g = new THREE.Group();
+            const w=3*s, h=1.8*s, d=0.8*s;
+            const p1=new THREE.Vector3(-w,-0.5*s,0), p2=new THREE.Vector3(w,-0.5*s,0);
+            const p3=new THREE.Vector3(-w,-0.5*s,d), p4=new THREE.Vector3(w,-0.5*s,d);
+            const p5=new THREE.Vector3(-w,h-0.5*s,0), p6=new THREE.Vector3(w,h-0.5*s,0);
+            const p7=new THREE.Vector3(-w,h-0.5*s,d), p8=new THREE.Vector3(w,h-0.5*s,d);
+            const apex=new THREE.Vector3(0,h*1.3-0.5*s,d/2);
+            const apexBack=new THREE.Vector3(0,h*0.7-0.5*s,d/2);
+            const sc=0x88aacc;
+            [p1,p2,p3,p4,p5,p6,p7,p8].forEach((a,i,arr)=>{
+                if(i<4) { if(i%2===0) g.add(createBeam(arr[i],arr[i+1],sc,0.1)); }
+            });
+            g.add(createBeam(p1,p2,sc,0.1)); g.add(createBeam(p3,p4,sc,0.1));
+            g.add(createBeam(p1,p3,sc,0.08)); g.add(createBeam(p2,p4,sc,0.08));
+            g.add(createBeam(p1,p5,sc,0.1)); g.add(createBeam(p2,p6,sc,0.1));
+            g.add(createBeam(p3,p7,sc,0.1)); g.add(createBeam(p4,p8,sc,0.1));
+            g.add(createBeam(p5,p7,0x6699bb,0.08)); g.add(createBeam(p6,p8,0x6699bb,0.08));
+            const m1=new THREE.Vector3().lerpVectors(p1,p2,0.3); m1.y=-0.5*s;
+            const m2=new THREE.Vector3().lerpVectors(p1,p2,0.7); m2.y=-0.5*s;
+            const t1=new THREE.Vector3().lerpVectors(p5,p6,0.3); t1.y=h-0.5*s;
+            const t2=new THREE.Vector3().lerpVectors(p5,p6,0.7); t2.y=h-0.5*s;
+            g.add(createBeam(m1,t2,0x557799,0.06)); g.add(createBeam(m2,t1,0x557799,0.06));
+            g.add(createBeam(m1,apex,0x557799,0.06)); g.add(createBeam(m2,apex,0x557799,0.06));
+            const m3=new THREE.Vector3().lerpVectors(p3,p4,0.3); m3.y=-0.5*s;
+            const m4=new THREE.Vector3().lerpVectors(p3,p4,0.7); m4.y=-0.5*s;
+            g.add(createBeam(m3,apexBack,0x557799,0.06)); g.add(createBeam(m4,apexBack,0x557799,0.06));
+            [p1,p2,p3,p4,p5,p6,p7,p8].forEach(p => g.add(createJoint(p, 0.13)));
+            g.add(createJoint(apex, 0.18)); g.add(createJoint(apexBack, 0.14));
+            g.position.set(ox, 0, oz); return g;
+        }
+        [[-4,-2],[-4,0],[-4,2],[0,-2],[0,0],[0,2],[4,-2],[4,0],[4,2]].forEach(([x,z])=>trussGroup.add(createTruss(x,z,0.7)));
+        [[-2,-3],[2,-3],[-2,3],[2,3]].forEach(([x,z])=>trussGroup.add(createTruss(x,z,0.6)));
+        scene.add(trussGroup);
+
+        const floorMesh = new THREE.Mesh(
+            new THREE.PlaneGeometry(20,20),
+            new THREE.MeshStandardMaterial({ color:0x050505, metalness:0.9, roughness:0.2, transparent:true, opacity:0.5 })
+        );
+        floorMesh.rotation.x = -Math.PI/2; floorMesh.position.y = -1.6; scene.add(floorMesh);
+
+        const pGeo = new THREE.BufferGeometry();
+        const pArr = new Float32Array(600*3);
+        for(let i=0;i<600*3;i++) pArr[i]=(Math.random()-0.5)*30;
+        pGeo.setAttribute('position', new THREE.BufferAttribute(pArr,3));
+        const particles = new THREE.Points(pGeo, new THREE.PointsMaterial({ color:0xc9a84c, size:0.025, transparent:true, opacity:0.35, blending:THREE.AdditiveBlending }));
+        scene.add(particles);
+
+        let mx=0, my=0, tRX=0, tRY=0;
+        document.addEventListener('mousemove', e => { mx=(e.clientX/window.innerWidth)*2-1; my=-(e.clientY/window.innerHeight)*2+1; });
+        window.addEventListener('resize', () => { camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth,window.innerHeight); });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            tRY += (mx*0.3 - tRY)*0.02;
+            tRX += (-my*0.15 - tRX)*0.02;
+            trussGroup.rotation.y = tRY + Date.now()*0.0001;
+            trussGroup.rotation.x = tRX;
+            trussGroup.position.y = Math.sin(Date.now()*0.0005)*0.12;
+            particles.rotation.y += 0.0002;
+            camera.position.x = Math.sin(Date.now()*0.00005)*3.6 + mx*0.5;
+            camera.position.z = Math.cos(Date.now()*0.00005)*3.6 + 10;
+            camera.lookAt(0,1,0);
+            renderer.render(scene, camera);
+        }
+        animate();
+    }
+    window.addEventListener('load', () => setTimeout(initThreeScene, 1300));
+
+    /* ===== CONFIGURATOR 3D ===== */
+    function startConfigurator() {
+        const cContainer = document.getElementById('configurator-canvas');
+        if (!cContainer) return;
+        if (typeof THREE === 'undefined') { setTimeout(startConfigurator, 200); return; }
+        if (typeof THREE.OrbitControls === 'undefined') { setTimeout(startConfigurator, 200); return; }
+
+        const cScene = new THREE.Scene();
+        const cCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 500);
+        const cRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        cRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        cRenderer.setClearColor(0x080c14, 1);
+        cRenderer.shadowMap.enabled = true;
+
+        function resizeConfigurator() {
+            const rect = cContainer.getBoundingClientRect();
+            const w = rect.width  || cContainer.offsetWidth  || 600;
+            const h = rect.height || cContainer.offsetHeight || 500;
+            cCamera.aspect = w / h;
+            cCamera.updateProjectionMatrix();
+            cRenderer.setSize(w, h);
+        }
+        resizeConfigurator();
+        cContainer.appendChild(cRenderer.domElement);
+
+        // OrbitControls
+        const controls = new THREE.OrbitControls(cCamera, cRenderer.domElement);
+        controls.enableDamping   = true;
+        controls.dampingFactor   = 0.06;
+        controls.minDistance     = 3;
+        controls.maxDistance     = 80;
+        controls.autoRotate      = true;
+        controls.autoRotateSpeed = 0.6;
+        controls.enablePan       = true;
+
+        // Lighting
+        cScene.add(new THREE.AmbientLight(0xffffff, 0.5));
+        const dl1 = new THREE.DirectionalLight(0xfff4e0, 1.4);
+        dl1.position.set(10, 18, 10); dl1.castShadow = true; cScene.add(dl1);
+        const dl2 = new THREE.DirectionalLight(0xc9a84c, 0.6);
+        dl2.position.set(-10, 6, -8); cScene.add(dl2);
+        const dl3 = new THREE.DirectionalLight(0x4488cc, 0.3);
+        dl3.position.set(0, -5, 10); cScene.add(dl3);
+
+        // Grid
+        const gridH = new THREE.GridHelper(60, 30, 0x2a2a18, 0x1a1a0e);
+        gridH.position.y = -0.02; cScene.add(gridH);
+
+        // ---- Helper to add joint sphere correctly ----
+        function addJoint(group, pos, r, mat) {
+            const m = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 10), mat);
+            m.position.copy(pos);
+            m.castShadow = true;
+            group.add(m);
+        }
+
+        let roofMesh = null;
+        let lastPanjang = 10, lastBentang = 6, lastTinggi = 1.8;
+
+        function buildRoof(bentang, tinggi, panjang, jarak) {
+            // Remove old mesh
+            if (roofMesh) {
+                cScene.remove(roofMesh);
+                roofMesh.traverse(c => {
+                    if (c.isMesh) { c.geometry.dispose(); }
+                });
+            }
+            lastPanjang = panjang; lastBentang = bentang; lastTinggi = tinggi;
+
+            const group    = new THREE.Group();
+            const halfW    = bentang / 2;
+            const trussCount = Math.max(2, Math.round(panjang / jarak) + 1);
+            const actualJarak = panjang / (trussCount - 1);
+
+            const beamMat = new THREE.MeshStandardMaterial({
+                color: 0x99aabb, metalness: 0.88, roughness: 0.22
+            });
+            const jointMat = new THREE.MeshStandardMaterial({
+                color: 0xc9a84c, metalness: 0.92, roughness: 0.12,
+                emissive: 0xc9a84c, emissiveIntensity: 0.12
+            });
+            const roofMat = new THREE.MeshStandardMaterial({
+                color: 0x4477aa, metalness: 0.55, roughness: 0.45,
+                transparent: true, opacity: 0.22, side: THREE.DoubleSide
+            });
+
+            function beam(a, b, r = 0.06) {
+                const dir = new THREE.Vector3().subVectors(b, a);
+                const len = dir.length();
+                const geo = new THREE.CylinderGeometry(r, r, len, 8);
+                const mid = new THREE.Vector3().addVectors(a, b).multiplyScalar(0.5);
+                const mesh = new THREE.Mesh(geo, beamMat);
+                mesh.position.copy(mid);
+                mesh.quaternion.setFromUnitVectors(
+                    new THREE.Vector3(0, 1, 0), dir.clone().normalize()
+                );
+                mesh.castShadow = true;
+                return mesh;
+            }
+
+            // Build each truss frame
+            for (let i = 0; i < trussCount; i++) {
+                const z = -panjang / 2 + i * actualJarak;
+                const bL  = new THREE.Vector3(-halfW, 0, z);
+                const bR  = new THREE.Vector3( halfW, 0, z);
+                const top = new THREE.Vector3(0, tinggi, z);
+
+                // Bottom chord, left rafter, right rafter
+                group.add(beam(bL, bR, 0.07));
+                group.add(beam(bL, top, 0.07));
+                group.add(beam(bR, top, 0.07));
+
+                // King post (vertical center)
+                const bMid = new THREE.Vector3(0, 0, z);
+                group.add(beam(bMid, top, 0.045));
+
+                // Quarter-point diagonals
+                const qL = new THREE.Vector3(-halfW * 0.5, 0, z);
+                const qR = new THREE.Vector3( halfW * 0.5, 0, z);
+                const mL = new THREE.Vector3(-halfW * 0.5, tinggi * 0.5, z);
+                const mR = new THREE.Vector3( halfW * 0.5, tinggi * 0.5, z);
+                group.add(beam(qL, mR, 0.04));
+                group.add(beam(qR, mL, 0.04));
+
+                // Joints
+                addJoint(group, bL,  0.12, jointMat);
+                addJoint(group, bR,  0.12, jointMat);
+                addJoint(group, top, 0.15, jointMat);
+                addJoint(group, bMid,0.10, jointMat);
+            }
+
+            // Ridge and eave purlins (longitudinal)
+            const z0 = -panjang / 2;
+            const z1 =  panjang / 2;
+            // Ridge
+            group.add(beam(new THREE.Vector3(0, tinggi, z0), new THREE.Vector3(0, tinggi, z1), 0.07));
+            // Left eave
+            group.add(beam(new THREE.Vector3(-halfW, 0, z0), new THREE.Vector3(-halfW, 0, z1), 0.07));
+            // Right eave
+            group.add(beam(new THREE.Vector3( halfW, 0, z0), new THREE.Vector3( halfW, 0, z1), 0.07));
+            // Mid-rafter purlins
+            const pStep = panjang / Math.max(4, Math.round(panjang / 1.2));
+            for (let s = 0; s <= Math.round(panjang / 1.2); s++) {
+                const t = s / Math.round(panjang / 1.2);
+                const zz = z0 + t * panjang;
+                const lerpL = new THREE.Vector3(-halfW * 0.5, tinggi * 0.5, zz);
+                const lerpR = new THREE.Vector3( halfW * 0.5, tinggi * 0.5, zz);
+                // horizontal purlin at mid-rafter
+                group.add(beam(
+                    new THREE.Vector3(-halfW * 0.5, tinggi * 0.5, z0),
+                    new THREE.Vector3(-halfW * 0.5, tinggi * 0.5, z1), 0.045
+                ));
+                group.add(beam(
+                    new THREE.Vector3( halfW * 0.5, tinggi * 0.5, z0),
+                    new THREE.Vector3( halfW * 0.5, tinggi * 0.5, z1), 0.045
+                ));
+                break; // only one set of mid purlins needed
+            }
+
+            // Transparent roof panels (left + right slope)
+            function slopePanel(pts) {
+                const shape = new THREE.Shape(pts);
+                const geo   = new THREE.ExtrudeGeometry(shape, { depth: panjang, bevelEnabled: false });
+                const mesh  = new THREE.Mesh(geo, roofMat);
+                mesh.position.z = z0;
+                return mesh;
+            }
+            group.add(slopePanel([
+                new THREE.Vector2(-halfW, 0),
+                new THREE.Vector2(0, tinggi),
+                new THREE.Vector2(-halfW * 0.001, tinggi),
+                new THREE.Vector2(-halfW * 0.001, 0)
+            ]));
+            group.add(slopePanel([
+                new THREE.Vector2(0, tinggi),
+                new THREE.Vector2(halfW, 0),
+                new THREE.Vector2(halfW * 0.001, 0),
+                new THREE.Vector2(halfW * 0.001, tinggi)
+            ]));
+
+            // Center group at origin Y
+            group.position.set(0, 0, 0);
+            cScene.add(group);
+            roofMesh = group;
+
+            // Auto-fit camera
+            fitCameraToRoof(bentang, tinggi, panjang);
+        }
+
+        // ---- Auto-fit camera to current roof size ----
+        function fitCameraToRoof(bentang, tinggi, panjang) {
+            const maxDim = Math.max(bentang, tinggi, panjang);
+            const dist   = maxDim * 1.5 + 4;
+            const centerY = tinggi / 2;
+
+            controls.target.set(0, centerY, 0);
+            cCamera.position.set(dist * 0.7, centerY + dist * 0.5, dist * 0.9);
+            cCamera.lookAt(0, centerY, 0);
+            controls.update();
+        }
+
+        function calcAndUpdate() {
+            const bentang = parseFloat(document.getElementById('param-bentang').value);
+            const tinggi  = parseFloat(document.getElementById('param-tinggi').value);
+            const panjang = parseFloat(document.getElementById('param-panjang').value);
+            const jarak   = parseFloat(document.getElementById('param-jarak').value);
+            document.getElementById('val-bentang').textContent = bentang.toFixed(1)+' m';
+            document.getElementById('val-tinggi').textContent  = tinggi.toFixed(1)+' m';
+            document.getElementById('val-panjang').textContent = panjang.toFixed(0)+' m';
+            document.getElementById('val-jarak').textContent   = jarak.toFixed(1)+' m';
+            buildRoof(bentang, tinggi, panjang, jarak);
+            // Reset auto-rotate when params change
+            controls.autoRotate = true;
+            const miring = Math.sqrt((bentang/2)**2 + tinggi**2);
+            const luasAtap = miring * 2 * panjang;
+            const trussCount = Math.round(panjang/jarak)+1;
+            const c75 = Math.ceil(trussCount * (miring*2+bentang) / 6 * 1.1);
+            const reng = Math.ceil(luasAtap / 0.3 * 1.1);
+            const roof = Math.ceil(luasAtap / 0.78 * 1.1);
+            const sel = document.getElementById('param-genteng');
+            const price = parseInt(sel.options[sel.selectedIndex].dataset.price);
+            const total = (c75*85000) + (reng*45000) + (roof*price) + 150000;
+            document.getElementById('res-c75').textContent = c75+' batang';
+            document.getElementById('res-reng').textContent = reng+' batang';
+            document.getElementById('res-roof').textContent = roof+' lembar';
+            document.getElementById('res-total').textContent = 'Rp '+total.toLocaleString('id-ID');
+        }
+        ['param-bentang','param-tinggi','param-panjang','param-jarak','param-genteng'].forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.addEventListener('input', calcAndUpdate);
+        });
+        // Panggil langsung saat inisialisasi
+        calcAndUpdate();
+
+        window.sendCustomDesignWA = function() {
+            const b=document.getElementById('param-bentang').value, t=document.getElementById('param-tinggi').value;
+            const p=document.getElementById('param-panjang').value, j=document.getElementById('param-jarak').value;
+            const gt=document.getElementById('param-genteng'), gn=gt.options[gt.selectedIndex].text;
+            const total=document.getElementById('res-total').textContent;
+            const msg = `Halo BajaRinganKu! Saya ingin mengajukan spesifikasi atap:%0A%0ABentang: ${b}m%0ATinggi: ${t}m%0APanjang: ${p}m%0AJarak: ${j}m%0APenutup: ${encodeURIComponent(gn)}%0AEstimasi: ${encodeURIComponent(total)}`;
+            const waNum = (siteKontak && siteKontak.wa) ? siteKontak.wa : '6288219640526';
+            window.open(`https://wa.me/${waNum}?text=${msg}`, '_blank');
+        };
+
+        (function cAnimate() {
+            requestAnimationFrame(cAnimate);
+            controls.update();
+            cRenderer.render(cScene, cCamera);
+        })();
+
+        // Resize observer â€” handles panel resize (not just window resize)
+        if (window.ResizeObserver) {
+            new ResizeObserver(() => {
+                resizeConfigurator();
+                fitCameraToRoof(lastBentang, lastTinggi, lastPanjang);
+            }).observe(cContainer);
+        }
+        window.addEventListener('resize', () => {
+            resizeConfigurator();
+        });
+
+        // Stop auto-rotate on user interaction, resume after 4s idle
+        let autoRotateTimer;
+        cRenderer.domElement.addEventListener('pointerdown', () => {
+            controls.autoRotate = false;
+            clearTimeout(autoRotateTimer);
+        });
+        cRenderer.domElement.addEventListener('pointerup', () => {
+            autoRotateTimer = setTimeout(() => { controls.autoRotate = true; }, 4000);
+        });
+
+        // Expose resetView for the reset button
+        window.resetConfigView = function() {
+            fitCameraToRoof(lastBentang, lastTinggi, lastPanjang);
+            controls.autoRotate = true;
+        };
+    }
+    window.addEventListener('load', () => setTimeout(startConfigurator, 500));
+    </script>
+</body>
+</html>

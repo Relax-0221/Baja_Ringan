@@ -1,0 +1,1187 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel â€“ BajaRinganKu</title>
+    <!-- Firebase Compat SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --black:   #0a0a0a; --black-2: #111; --black-3: #1a1a1a; --black-4: #222;
+            --gold:    #c9a84c; --gold-l:  #e8c96a; --gold-d: #a07830;
+            --white:   #ffffff; --w-dim:   rgba(255,255,255,0.65);
+            --border:  rgba(255,255,255,0.08); --green: #4ade80; --red: #f87171;
+            --radius:  6px; --ease: cubic-bezier(.25,.46,.45,.94);
+        }
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Barlow',sans-serif; background:var(--black); color:var(--white); display:flex; min-height:100vh; }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 260px; min-height: 100vh; background: var(--black-2);
+            border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; flex-shrink: 0;
+            position: sticky; top: 0; height: 100vh; overflow-y: auto;
+        }
+        .sidebar-logo {
+            padding: 1.8rem 1.5rem;
+            font-family:'Barlow Condensed',sans-serif;
+            font-size: 1.4rem; font-weight: 900; letter-spacing: 3px;
+            text-transform: uppercase; border-bottom: 1px solid var(--border);
+        }
+        .sidebar-logo span { color: var(--gold); }
+        .sidebar-label {
+            font-size: 0.65rem; font-weight: 700; letter-spacing: 3px;
+            text-transform: uppercase; color: var(--w-dim);
+            padding: 1.5rem 1.5rem 0.5rem;
+        }
+        .sidebar-nav { list-style: none; padding: 0 0.8rem; }
+        .sidebar-nav li { margin-bottom: 2px; }
+        .sidebar-nav a {
+            display: flex; align-items: center; gap: 10px;
+            padding: 0.75rem 1rem; border-radius: var(--radius);
+            color: var(--w-dim); font-size: 0.88rem; font-weight: 600;
+            transition: all 0.25s; cursor: pointer;
+        }
+        .sidebar-nav a:hover { background: var(--black-3); color: var(--white); }
+        .sidebar-nav a.active { background: rgba(201,168,76,0.12); color: var(--gold); border-left: 2px solid var(--gold); }
+        .sidebar-nav a i { width: 18px; text-align: center; font-size: 0.9rem; }
+        .sidebar-footer { margin-top: auto; padding: 1.2rem 1.5rem; border-top: 1px solid var(--border); }
+        .sidebar-footer a {
+            display: flex; align-items: center; gap: 8px;
+            color: var(--w-dim); font-size: 0.82rem; font-weight: 600;
+        }
+        .sidebar-footer a:hover { color: var(--gold); }
+
+        /* MAIN */
+        .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        .topbar {
+            padding: 1.2rem 2rem; background: var(--black-2);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .topbar h1 { font-family:'Barlow Condensed',sans-serif; font-size:1.4rem; font-weight:900; text-transform:uppercase; letter-spacing:2px; }
+        .topbar-right { display:flex; align-items:center; gap:1rem; }
+        .btn-preview {
+            display:inline-flex; align-items:center; gap:6px;
+            padding:0.55rem 1.2rem; background:var(--gold); color:var(--black);
+            font-size:0.75rem; font-weight:800; letter-spacing:2px; text-transform:uppercase;
+            border:none; border-radius:var(--radius); cursor:pointer; transition:all 0.3s;
+        }
+        .btn-preview:hover { background:var(--gold-l); }
+        .content { padding: 2rem; flex: 1; }
+
+        /* PANELS */
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        /* CARDS */
+        .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1.2rem; margin-bottom:2rem; }
+        .stat-card {
+            background:var(--black-2); border:1px solid var(--border);
+            border-top:2px solid var(--gold); padding:1.5rem;
+            border-radius:var(--radius);
+        }
+        .stat-card .label { font-size:0.7rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--w-dim); margin-bottom:0.5rem; }
+        .stat-card .value { font-family:'Barlow Condensed',sans-serif; font-size:2.2rem; font-weight:900; color:var(--gold); }
+        .stat-card .sub { font-size:0.78rem; color:var(--w-dim); margin-top:4px; }
+
+        /* SECTION HEADING */
+        .s-heading {
+            font-family:'Barlow Condensed',sans-serif;
+            font-size:1.15rem; font-weight:900; text-transform:uppercase;
+            letter-spacing:2px; margin-bottom:1.2rem;
+            padding-bottom:0.8rem; border-bottom:1px solid var(--border);
+            display:flex; align-items:center; gap:10px;
+        }
+        .s-heading i { color:var(--gold); }
+
+        /* TABLES */
+        .table-wrap { background:var(--black-2); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:2rem; }
+        table { width:100%; border-collapse:collapse; }
+        thead { background:var(--black-3); }
+        th { padding:0.8rem 1rem; text-align:left; font-size:0.7rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--w-dim); }
+        td { padding:0.9rem 1rem; font-size:0.88rem; border-top:1px solid var(--border); vertical-align:middle; }
+        tr:hover td { background:rgba(255,255,255,0.02); }
+        .badge { display:inline-block; padding:0.2rem 0.6rem; border-radius:3px; font-size:0.68rem; font-weight:800; letter-spacing:1px; text-transform:uppercase; }
+        .badge-gold { background:rgba(201,168,76,0.15); color:var(--gold); }
+        .badge-green { background:rgba(74,222,128,0.12); color:var(--green); }
+        .badge-red { background:rgba(248,113,113,0.12); color:var(--red); }
+
+        /* FORM ELEMENTS */
+        .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; }
+        .form-group { display:flex; flex-direction:column; gap:0.4rem; margin-bottom:1.1rem; }
+        .form-group label { font-size:0.72rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--w-dim); }
+        .form-group input, .form-group textarea, .form-group select {
+            padding:0.8rem 1rem; background:var(--black-3);
+            border:1px solid var(--border); color:var(--white);
+            font-family:'Barlow',sans-serif; font-size:0.9rem;
+            border-radius:var(--radius); transition:all 0.25s; outline:none;
+        }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color:var(--gold); background:rgba(201,168,76,0.04); }
+        .form-group textarea { resize:vertical; height:100px; }
+        .form-group select option { background:var(--black-3); }
+        .form-group .hint { font-size:0.75rem; color:var(--w-dim); }
+        .form-group input[type="file"] { cursor:pointer; }
+        .form-full { grid-column: 1 / -1; }
+
+        /* BUTTONS */
+        .btn { display:inline-flex; align-items:center; gap:6px; padding:0.65rem 1.3rem; border:none; border-radius:var(--radius); font-size:0.75rem; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; cursor:pointer; transition:all 0.25s; }
+        .btn-gold-sm { background:var(--gold); color:var(--black); }
+        .btn-gold-sm:hover { background:var(--gold-l); }
+        .btn-outline-sm { background:transparent; border:1px solid var(--border); color:var(--w-dim); }
+        .btn-outline-sm:hover { border-color:var(--gold); color:var(--gold); }
+        .btn-danger { background:rgba(248,113,113,0.12); color:var(--red); border:1px solid rgba(248,113,113,0.2); }
+        .btn-danger:hover { background:rgba(248,113,113,0.2); }
+
+        /* CARD PANEL */
+        .panel-card { background:var(--black-2); border:1px solid var(--border); border-radius:var(--radius); padding:1.8rem; margin-bottom:1.5rem; }
+
+        /* IMAGE GRID */
+        .img-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:1rem; margin-top:1rem; }
+        .img-item {
+            background:var(--black-3); border:1px solid var(--border); border-radius:var(--radius);
+            overflow:hidden; position:relative;
+        }
+        .img-item img { width:100%; height:130px; object-fit:cover; display:block; }
+        .img-placeholder { width:100%; height:130px; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px; color:var(--w-dim); font-size:0.78rem; }
+        .img-placeholder i { font-size:2rem; color:var(--gold); opacity:0.5; }
+        .img-actions { display:flex; gap:6px; padding:0.6rem; }
+        .img-label { padding:0 0.6rem 0.6rem; font-size:0.78rem; color:var(--w-dim); }
+
+        /* TOAST */
+        .toast {
+            position:fixed; bottom:2rem; right:2rem; z-index:9999;
+            background:var(--black-3); border:1px solid var(--gold);
+            padding:1rem 1.5rem; border-radius:var(--radius);
+            display:flex; align-items:center; gap:10px;
+            font-size:0.88rem; font-weight:600;
+            transform:translateY(80px); opacity:0;
+            transition:all 0.4s var(--ease); pointer-events:none;
+        }
+        .toast.show { transform:translateY(0); opacity:1; }
+        .toast i { color:var(--green); }
+
+        /* TOGGLE */
+        .toggle-row { display:flex; align-items:center; justify-content:space-between; padding:0.9rem 0; border-bottom:1px solid var(--border); }
+        .toggle-row:last-child { border-bottom:none; }
+        .toggle-info h5 { font-size:0.9rem; font-weight:700; margin-bottom:2px; }
+        .toggle-info p { font-size:0.78rem; color:var(--w-dim); }
+        .toggle { position:relative; width:44px; height:24px; }
+        .toggle input { display:none; }
+        .toggle-slider {
+            position:absolute; inset:0; background:var(--black-4);
+            border:1px solid var(--border); border-radius:12px; cursor:pointer; transition:0.3s;
+        }
+        .toggle-slider::before { content:''; position:absolute; width:16px; height:16px; background:var(--w-dim); border-radius:50%; top:3px; left:3px; transition:0.3s; }
+        .toggle input:checked + .toggle-slider { background:rgba(201,168,76,0.2); border-color:var(--gold); }
+        .toggle input:checked + .toggle-slider::before { transform:translateX(20px); background:var(--gold); }
+
+        /* RESPONSIVE */
+        @media(max-width:900px) {
+            .sidebar { width:220px; }
+            .stats-grid { grid-template-columns:1fr 1fr; }
+            .form-grid { grid-template-columns:1fr; }
+        }
+        @media(max-width:640px) {
+            .sidebar { display:none; }
+            .stats-grid { grid-template-columns:1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">Baja<span>Ringan</span>Ku</div>
+        <p class="sidebar-label">Menu Utama</p>
+        <ul class="sidebar-nav">
+            <li><a onclick="switchPanel('dashboard')" class="active" id="nav-dashboard"><i class="fas fa-chart-line"></i> Dashboard</a></li>
+            <li><a onclick="switchPanel('produk')" id="nav-produk"><i class="fas fa-box"></i> Kelola Produk</a></li>
+            <li><a onclick="switchPanel('gallery')" id="nav-gallery"><i class="fas fa-images"></i> Galeri Proyek</a></li>
+            <li><a onclick="switchPanel('layanan')" id="nav-layanan"><i class="fas fa-tools"></i> Layanan</a></li>
+            <li><a onclick="switchPanel('testimoni')" id="nav-testimoni"><i class="fas fa-star"></i> Testimoni</a></li>
+        </ul>
+        <p class="sidebar-label">Pengaturan</p>
+        <ul class="sidebar-nav">
+            <li><a onclick="switchPanel('profil')" id="nav-profil"><i class="fas fa-building"></i> Profil Toko</a></li>
+            <li><a onclick="switchPanel('kontak')" id="nav-kontak"><i class="fas fa-phone"></i> Info Kontak</a></li>
+            <li><a onclick="switchPanel('pengaturan')" id="nav-pengaturan"><i class="fas fa-cog"></i> Pengaturan</a></li>
+        </ul>
+        <div class="sidebar-footer">
+            <a href="index.html" target="_blank"><i class="fas fa-external-link-alt"></i> Lihat Website</a>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="main">
+        <div class="topbar">
+            <h1 id="page-title">Dashboard</h1>
+            <div class="topbar-right">
+                <button class="btn-preview" onclick="showToast('Perubahan disimpan!','check-circle')">
+                    <i class="fas fa-save"></i> Simpan Semua
+                </button>
+            </div>
+        </div>
+        <div class="content">
+
+            <!-- ===== DASHBOARD ===== -->
+            <div class="panel active" id="panel-dashboard">
+                <div class="stats-grid">
+                    <div class="stat-card"><div class="label">Total Produk</div><div class="value" id="s-produk">8</div><div class="sub">Aktif ditampilkan</div></div>
+                    <div class="stat-card"><div class="label">Galeri Foto</div><div class="value" id="s-gallery">6</div><div class="sub">Proyek tersimpan</div></div>
+                    <div class="stat-card"><div class="label">Testimoni</div><div class="value" id="s-testi">3</div><div class="sub">Ulasan pelanggan</div></div>
+                    <div class="stat-card"><div class="label">Layanan</div><div class="value" id="s-layanan">6</div><div class="sub">Jenis layanan</div></div>
+                </div>
+                <div class="panel-card">
+                    <div class="s-heading"><i class="fas fa-info-circle"></i> Panduan Admin Panel</div>
+                    <p style="color:var(--w-dim);line-height:1.8;font-size:0.92rem;">
+                        Gunakan menu di sebelah kiri untuk mengelola konten website BajaRinganKu.<br>
+                        Setiap perubahan yang disimpan akan otomatis tersimpan di <strong style="color:var(--gold)">localStorage</strong> browser dan langsung terlihat di halaman utama.<br><br>
+                        <strong>Cara pakai:</strong> Pilih menu â†’ Edit data â†’ klik <strong style="color:var(--gold)">Simpan</strong>.
+                    </p>
+                </div>
+                <div class="panel-card">
+                    <div class="s-heading"><i class="fas fa-clock"></i> Aktifitas Terakhir</div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>Waktu</th><th>Aksi</th><th>Status</th></tr></thead>
+                            <tbody id="activity-log">
+                                <tr><td style="color:var(--w-dim)">â€”</td><td style="color:var(--w-dim)">Belum ada aktivitas</td><td>â€”</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== PRODUK ===== -->
+            <div class="panel" id="panel-produk">
+                <div class="panel-card">
+                    <div class="s-heading"><i class="fas fa-plus-circle"></i> Tambah / Edit Produk</div>
+                    <div class="form-grid">
+                        <div class="form-group"><label>Nama Produk</label><input type="text" id="p-name" placeholder="cth: Truss Baja Ringan C75"></div>
+                        <div class="form-group"><label>Harga</label><input type="text" id="p-price" placeholder="cth: Rp 85.000"></div>
+                        <div class="form-group"><label>Badge Label</label>
+                            <select id="p-badge"><option>Best Seller</option><option>Premium</option><option>Populer</option><option>Ekonomis</option><option>Terlaris</option></select>
+                        </div>
+                        <div class="form-group"><label>Icon (Font Awesome class)</label><input type="text" id="p-icon" placeholder="cth: fa-layer-group"></div>
+                        <div class="form-group form-full"><label>Deskripsi</label><textarea id="p-desc" placeholder="Deskripsi singkat produk..."></textarea></div>
+                        <div class="form-group form-full">
+                            <div style="display:flex;gap:0.8rem;flex-wrap:wrap;align-items:center;">
+                                <button class="btn btn-gold-sm" id="btn-save-product" onclick="addProduct()"><i class="fas fa-plus"></i> Tambah Produk</button>
+                                <button class="btn btn-outline-sm" onclick="cancelEdit();clearProductForm();renderProdukTable()"><i class="fas fa-times"></i> Bersihkan</button>
+                                <span id="product-edit-hint" style="display:none;font-size:0.75rem;color:var(--gold);font-weight:700;letter-spacing:1px;">âœ MODE EDIT â€” ubah data lalu klik Simpan Perubahan</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="s-heading"><i class="fas fa-list"></i> Daftar Produk</div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Nama Produk</th><th>Harga</th><th>Badge</th><th>Aksi</th></tr></thead>
+                        <tbody id="produk-table"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ===== GALLERY ===== -->
+            <div class="panel" id="panel-gallery">
+                <div class="panel-card">
+                    <div class="s-heading"><i class="fas fa-upload"></i> Tambah Foto Proyek</div>
+                    <div class="form-grid">
+                        <div class="form-group"><label>Nama Proyek</label><input type="text" id="g-name" placeholder="cth: Gudang Industri Jababeka"></div>
+                        <div class="form-group"><label>Tahun / Lokasi</label><input type="text" id="g-year" placeholder="cth: Kawasan Industri Jababeka â€” 2024"></div>
+                        <div class="form-group form-full">
+                            <label>URL Gambar <span class="hint">(gunakan URL gambar langsung, cth: https://...)</span></label>
+                            <input type="url" id="g-img" placeholder="https://images.unsplash.com/...">
+                        </div>
+                        <div class="form-group form-full">
+                            <div style="display:flex;gap:0.8rem;flex-wrap:wrap;align-items:center;">
+                                <button class="btn btn-gold-sm" id="btn-save-gallery" onclick="addGallery()"><i class="fas fa-plus"></i> Tambah Proyek</button>
+                                <button class="btn btn-outline-sm" onclick="previewGalleryImg()"><i class="fas fa-eye"></i> Preview Gambar</button>
+                                <button class="btn btn-outline-sm" onclick="cancelEdit();clearGalleryForm();renderGallery()"><i class="fas fa-times"></i> Bersihkan</button>
+                                <span id="gallery-edit-hint" style="display:none;font-size:0.75rem;color:var(--gold);font-weight:700;letter-spacing:1px;">âœ MODE EDIT</span>
+                            </div>
+                        </div>
+                        <div class="form-group form-full" id="g-preview" style="display:none;">
+                            <label>Preview</label>
+                            <img id="g-preview-img" src="" style="max-height:200px;border-radius:6px;object-fit:cover;border:1px solid var(--border);">
+                        </div>
+                    </div>
+                </div>
+                <div class="s-heading"><i class="fas fa-images"></i> Galeri Proyek</div>
+                <div class="img-grid" id="gallery-grid"></div>
+            </div>
+
+            <!-- ===== LAYANAN ===== -->
+            <div class="panel" id="panel-layanan">
+                <div class="panel-card">
+                    <div class="s-heading"><i class="fas fa-plus-circle"></i> Tambah / Edit Layanan</div>
+                    <div class="form-grid">
+                        <div class="form-group"><label>Nama Layanan</label><input type="text" id="l-name" placeholder="cth: Konsultasi Gratis"></div>
+                        <div class="form-group"><label>Icon (Font Awesome)</label><input type="text" id="l-icon" placeholder="cth: fa-calculator"></div>
+                        <div class="form-group form-full"><label>Deskripsi</label><textarea id="l-desc" placeholder="Deskripsi layanan..."></textarea></div>
+                        <div class="form-group form-full">
+                            <div style="display:flex;gap:0.8rem;flex-wrap:wrap;align-items:center;">
+                                <button class="btn btn-gold-sm" id="btn-save-layanan" onclick="addLayanan()"><i class="fas fa-plus"></i> Tambah Layanan</button>
+                                <button class="btn btn-outline-sm" onclick="cancelEdit();clearLayananForm();renderLayananTable()"><i class="fas fa-times"></i> Bersihkan</button>
+                                <span id="layanan-edit-hint" style="display:none;font-size:0.75rem;color:var(--gold);font-weight:700;letter-spacing:1px;">âœ MODE EDIT</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="s-heading"><i class="fas fa-list"></i> Daftar Layanan</div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Nama Layanan</th><th>Icon</th><th>Aksi</th></tr></thead>
+                        <tbody id="layanan-table"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ===== TESTIMONI ===== -->
+            <div class="panel" id="panel-testimoni">
+                <div class="panel-card">
+                    <div class="s-heading"><i class="fas fa-plus-circle"></i> Tambah Testimoni</div>
+                    <div class="form-grid">
+                        <div class="form-group"><label>Nama Pelanggan</label><input type="text" id="t-name" placeholder="cth: Ahmad Fauzi"></div>
+                        <div class="form-group"><label>Kota / Jabatan</label><input type="text" id="t-role" placeholder="cth: Kontraktor, Jakarta"></div>
+                        <div class="form-group"><label>Rating</label>
+                            <select id="t-rating"><option value="5">â˜…â˜…â˜…â˜…â˜… (5)</option><option value="4">â˜…â˜…â˜…â˜…â˜† (4)</option><option value="3">â˜…â˜…â˜…â˜†â˜† (3)</option></select>
+                        </div>
+                        <div class="form-group form-full"><label>Isi Ulasan</label><textarea id="t-text" placeholder="Tuliskan ulasan pelanggan..."></textarea></div>
+                        <div class="form-group form-full">
+                            <div style="display:flex;gap:0.8rem;flex-wrap:wrap;align-items:center;">
+                                <button class="btn btn-gold-sm" id="btn-save-testi" onclick="addTestimoni()"><i class="fas fa-plus"></i> Tambah Testimoni</button>
+                                <button class="btn btn-outline-sm" onclick="cancelEdit();clearTestiForm();renderTestiTable()"><i class="fas fa-times"></i> Bersihkan</button>
+                                <span id="testi-edit-hint" style="display:none;font-size:0.75rem;color:var(--gold);font-weight:700;letter-spacing:1px;">âœ MODE EDIT</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="s-heading"><i class="fas fa-list"></i> Daftar Testimoni</div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Nama</th><th>Kota</th><th>Rating</th><th>Ulasan</th><th>Aksi</th></tr></thead>
+                        <tbody id="testi-table"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ===== PROFIL ===== -->
+            <div class="panel" id="panel-profil">
+                <div class="panel-card">
+                    <div class="s-heading"><i class="fas fa-building"></i> Informasi Toko</div>
+                    <div class="form-grid">
+                        <div class="form-group"><label>Nama Toko</label><input type="text" id="pr-name" value="BajaRinganKu"></div>
+                        <div class="form-group"><label>Pengalaman (tahun)</label><input type="number" id="pr-exp" value="10"></div>
+                        <div class="form-group"><label>Total Proyek Selesai</label><input type="number" id="pr-project" value="500"></div>
+                        <div class="form-group"><label>Total Produk</label><input type="number" id="pr-produk-count" value="50"></div>
+                        <div class="form-group"><label>Kepuasan Klien (%)</label><input type="number" id="pr-satisfaction" value="98" max="100"></div>
+                        <div class="form-group form-full"><label>Deskripsi Singkat Toko</label>
+                            <textarea id="pr-desc">Mitra terpercaya Anda dalam penyediaan material baja ringan berkualitas tinggi untuk konstruksi modern. Pengalaman 10+ tahun melayani ribuan proyek.</textarea>
+                        </div>
+                        <div class="form-group form-full">
+                            <button class="btn btn-gold-sm" onclick="saveProfil()"><i class="fas fa-save"></i> Simpan Profil</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== KONTAK ===== -->
+            <div class="panel" id="panel-kontak">
+                <div class="panel-card">
+                    <div class="s-heading"><i class="fas fa-phone"></i> Informasi Kontak</div>
+                    <div class="form-grid">
+                        <div class="form-group form-full"><label>Nomor WhatsApp <span class="hint">(tanpa tanda + dan spasi, cth: 6288219640526)</span></label><input type="text" id="k-wa" value="6288219640526"></div>
+                        <div class="form-group"><label>Nomor Telepon</label><input type="text" id="k-telp" value="(021) 1234-5678"></div>
+                        <div class="form-group"><label>Email</label><input type="email" id="k-email" value="info@bajaringan.com"></div>
+                        <div class="form-group form-full"><label>Alamat</label><input type="text" id="k-alamat" value="Jl. Baja Raya No. 123, Jakarta Pusat, Indonesia 10110"></div>
+                        <div class="form-group"><label>Jam Buka</label><input type="text" id="k-jam" value="Senin - Sabtu: 08:00 - 18:00"></div>
+                        <div class="form-group form-full">
+                            <button class="btn btn-gold-sm" onclick="saveKontak()"><i class="fas fa-save"></i> Simpan Kontak</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== PENGATURAN ===== -->
+            <div class="panel" id="panel-pengaturan">
+                <div class="panel-card">
+                    <div class="s-heading"><i class="fas fa-toggle-on"></i> Tampilan & Fitur</div>
+                    <div class="toggle-row">
+                        <div class="toggle-info"><h5>Marquee Strip</h5><p>Pita berjalan di bawah hero section</p></div>
+                        <label class="toggle"><input type="checkbox" id="set-marquee" checked><span class="toggle-slider"></span></label>
+                    </div>
+                    <div class="toggle-row">
+                        <div class="toggle-info"><h5>Animasi Scroll Reveal</h5><p>Elemen muncul saat di-scroll</p></div>
+                        <label class="toggle"><input type="checkbox" id="set-reveal" checked><span class="toggle-slider"></span></label>
+                    </div>
+                    <div class="toggle-row">
+                        <div class="toggle-info"><h5>Floating WhatsApp Button</h5><p>Tombol WA melayang di pojok kanan</p></div>
+                        <label class="toggle"><input type="checkbox" id="set-floatwa" checked><span class="toggle-slider"></span></label>
+                    </div>
+                    <div class="toggle-row">
+                        <div class="toggle-info"><h5>Auto-rotate 3D Configurator</h5><p>Model atap berputar otomatis</p></div>
+                        <label class="toggle"><input type="checkbox" id="set-autorot" checked><span class="toggle-slider"></span></label>
+                    </div>
+                    <div style="margin-top:1.2rem;display:flex;gap:0.8rem;">
+                        <button class="btn btn-gold-sm" onclick="savePengaturan()"><i class="fas fa-save"></i> Simpan Pengaturan</button>
+                        <button class="btn btn-danger" onclick="resetAllData()"><i class="fas fa-trash"></i> Reset Semua Data</button>
+                    </div>
+                </div>
+                <div class="panel-card">
+                    <div class="s-heading"><i class="fas fa-download"></i> Export / Import Data</div>
+                    <div style="display:flex;gap:0.8rem;flex-wrap:wrap;">
+                        <button class="btn btn-outline-sm" onclick="exportData()"><i class="fas fa-file-export"></i> Export JSON</button>
+                        <label class="btn btn-outline-sm" style="cursor:pointer;"><i class="fas fa-file-import"></i> Import JSON<input type="file" accept=".json" style="display:none" onchange="importData(event)"></label>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- end .content -->
+    </div><!-- end .main -->
+
+    <!-- TOAST -->
+    <!-- Tombol edit mode indicator -->
+    <div id="edit-mode-bar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9998;background:rgba(201,168,76,0.15);border-bottom:2px solid #c9a84c;padding:0.6rem 1rem;font-size:0.8rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#c9a84c;display:none;align-items:center;justify-content:space-between;">
+        <span><i class="fas fa-pen" style="margin-right:8px"></i>Mode Edit Aktif â€” Ubah data di form lalu klik Simpan</span>
+        <button onclick="cancelEdit()" style="background:transparent;border:1px solid #c9a84c;color:#c9a84c;padding:0.3rem 0.8rem;border-radius:4px;cursor:pointer;font-size:0.75rem;font-weight:700;">âœ• Batal Edit</button>
+    </div>
+
+    <div class="toast" id="toast"><i class="fas fa-check-circle"></i> <span id="toast-msg">Disimpan!</span></div>
+
+<script>
+/* ===== DEFAULT DATA ===== */
+const DEFAULT = {
+    products: [
+        {name:'Truss Baja Ringan C75', desc:'Profil C75 untuk rangka atap utama, kokoh dan anti karat.', icon:'fa-layer-group', price:'Rp 85.000', badge:'Best Seller'},
+        {name:'Truss Baja Ringan C100', desc:'Profil C100 untuk bentang lebar, kekuatan maksimal.', icon:'fa-layer-group', price:'Rp 110.000', badge:'Premium'},
+        {name:'Reng Baja Ringan R33', desc:'Reng R33 untuk pemasangan genteng metal dan multiroof.', icon:'fa-ruler', price:'Rp 45.000', badge:'Populer'},
+        {name:'Reng Baja Ringan R30', desc:'Reng R30 ekonomis dengan kualitas terjamin.', icon:'fa-ruler', price:'Rp 38.000', badge:'Ekonomis'},
+        {name:'Baut SDS / Self Drilling', desc:'Baut khusus baja ringan anti karat berbagai ukuran.', icon:'fa-screwdriver-wrench', price:'Rp 25.000/pack', badge:'Terlaris'},
+        {name:'Genteng Metal Pasir', desc:'Genteng metal berlapis pasir, tahan karat & anti bocor.', icon:'fa-home', price:'Rp 65.000/lembar', badge:'Best Seller'},
+        {name:'Genteng Metal Polos', desc:'Genteng metal polos berkualitas dengan harga ekonomis.', icon:'fa-home', price:'Rp 48.000/lembar', badge:'Ekonomis'},
+        {name:'Kanal C Hi-Tensile', desc:'Kanal C dengan tensile tinggi G550 untuk kekuatan ekstra.', icon:'fa-bolt', price:'Rp 95.000', badge:'Premium'},
+    ],
+    gallery: [
+        {name:'Rumah Tinggal Modern', year:'Perumahan Graha Estate â€” 2024', img:''},
+        {name:'Gudang Industri', year:'Kawasan Industri Jababeka â€” 2023', img:''},
+        {name:'Masjid & Musholla', year:'Masjid Al-Hidayah â€” 2024', img:''},
+        {name:'Sekolah & Gedung Pendidikan', year:'SMA Negeri 1 â€” 2023', img:''},
+        {name:'Ruko & Pertokoan', year:'Ruko Central Business â€” 2024', img:''},
+        {name:'Gazebo & Carport', year:'Perumahan Green Garden â€” 2024', img:''},
+    ],
+    layanan: [
+        {name:'Konsultasi & RAB Gratis', icon:'fa-calculator', desc:'Tim kami siap membantu menghitung kebutuhan material dan RAB secara gratis tanpa syarat.'},
+        {name:'Pengiriman Cepat & Aman', icon:'fa-truck', desc:'Layanan pengiriman ke seluruh wilayah dengan armada sendiri, tepat waktu dan kondisi baik.'},
+        {name:'Jasa Pemasangan', icon:'fa-tools', desc:'Dikerjakan oleh tenaga ahli berpengalaman dengan garansi pemasangan.'},
+        {name:'Desain & Gambar Teknis', icon:'fa-drafting-compass', desc:'Layanan pembuatan gambar teknis dan desain struktur baja ringan oleh arsitek profesional.'},
+        {name:'Garansi Produk', icon:'fa-shield-alt', desc:'Setiap produk dilengkapi garansi resmi dari pabrikan.'},
+        {name:'Dukungan 24/7', icon:'fa-headset', desc:'Tim customer service siap melayani kapan saja melalui telepon, WhatsApp, atau email.'},
+    ],
+    testimoni: [
+        {name:'Ahmad Fauzi', role:'Kontraktor, Jakarta', rating:5, text:'Pelayanan sangat memuaskan! Material berkualitas, harga bersaing, dan pengiriman tepat waktu.'},
+        {name:'Siti Rahmawati', role:'Pemilik Rumah, Bandung', rating:5, text:'Konsultasi gratisnya sangat membantu. Tim sangat profesional dan memberikan solusi terbaik.'},
+        {name:'Dwi Prasetyo', role:'Developer Perumahan, Surabaya', rating:5, text:'Sudah 3 kali order di sini, kualitas selalu konsisten. Langganan tetap!'},
+    ],
+    settings: { marquee: true, reveal: true, floatwa: true, autorot: true },
+    kontak: { wa:'6288219640526', telp:'(021) 1234-5678', email:'info@bajaringan.com', alamat:'Jl. Baja Raya No. 123, Jakarta Pusat, Indonesia 10110', jam:'Senin - Sabtu: 08:00 - 18:00' },
+    profil: { name:'BajaRinganKu', exp:10, project:500, produkCount:50, satisfaction:98, desc:'Mitra terpercaya Anda dalam penyediaan material baja ringan berkualitas tinggi.' }
+};
+
+/* ===== FIREBASE CONFIG ===== */
+const firebaseConfig = {
+    apiKey:            "AIzaSyAqGvU2OP2qw8sCAUdnXFt2OMY1GlUGpLI",
+    authDomain:        "device-streaming-ffad81b3.firebaseapp.com",
+    projectId:         "device-streaming-ffad81b3",
+    storageBucket:     "device-streaming-ffad81b3.firebasestorage.app",
+    messagingSenderId: "997725194181",
+    appId:             "1:997725194181:web:edb9d5adb4401d80c26dac"
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+/* ===== COLLECTIONS ===== */
+// Setiap "key" (products, gallery, dll) disimpan sebagai 1 dokumen
+// di collection "brk_store", document id = key, field "data" = array JSON
+const COL = 'brk_store';
+
+/* ===== SAVE ke Firestore + localStorage (cache) ===== */
+async function dbSave(key, data) {
+    try {
+        await db.collection(COL).doc(key).set({ data: data });
+        // Cache lokal agar UI tetap cepat kalau offline
+        localStorage.setItem('brk_' + key, JSON.stringify(data));
+        logActivity('Simpan ' + key);
+    } catch(e) {
+        console.error('dbSave error', e);
+        // Fallback: simpan ke localStorage saja
+        localStorage.setItem('brk_' + key, JSON.stringify(data));
+        logActivity('Simpan ' + key + ' (offline)');
+        showToast('Tersimpan lokal (cek koneksi)', 'exclamation-triangle');
+    }
+}
+
+/* ===== LOAD dari Firestore (sekali), fallback localStorage lalu DEFAULT ===== */
+async function dbLoad(key) {
+    try {
+        const doc = await db.collection(COL).doc(key).get();
+        if (doc.exists && doc.data().data) {
+            const val = doc.data().data;
+            localStorage.setItem('brk_' + key, JSON.stringify(val)); // update cache
+            return val;
+        }
+    } catch(e) {
+        console.warn('dbLoad Firestore error, pakai localStorage:', e);
+    }
+    // Fallback: localStorage cache
+    try {
+        const cached = JSON.parse(localStorage.getItem('brk_' + key));
+        if (cached) return cached;
+    } catch(e) {}
+    return DEFAULT[key];
+}
+
+/* ===== VARIABEL GLOBAL (diisi saat init async) ===== */
+let products  = [];
+let gallery   = [];
+let layanan   = [];
+let testimoni = [];
+let settings  = {};
+let kontak    = {};
+let profil    = {};
+let activityLog = [];
+let editIdx = { product: -1, gallery: -1, layanan: -1, testi: -1 };
+
+/* ===== LOADING UI ===== */
+function showLoading(msg) {
+    var bar = document.getElementById('fb-loading');
+    if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'fb-loading';
+        bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#c9a84c;color:#000;padding:0.5rem 1rem;font-size:0.78rem;font-weight:800;letter-spacing:2px;text-align:center;text-transform:uppercase;transition:opacity 0.5s';
+        document.body.appendChild(bar);
+    }
+    bar.textContent = msg || 'â³ Memuat data dari Firebase...';
+    bar.style.opacity = '1';
+}
+function hideLoading() {
+    var bar = document.getElementById('fb-loading');
+    if (bar) { bar.style.opacity = '0'; setTimeout(function(){ bar.remove(); }, 500); }
+}
+
+/* ===== INISIALISASI ASYNC ===== */
+async function initAdmin() {
+    showLoading('â³ Menghubungkan ke Firebase...');
+    try {
+        products  = await dbLoad('products');
+        gallery   = await dbLoad('gallery');
+        layanan   = await dbLoad('layanan');
+        testimoni = await dbLoad('testimoni');
+        settings  = await dbLoad('settings');
+        kontak    = await dbLoad('kontak');
+        profil    = await dbLoad('profil');
+
+        // Jika Firestore kosong, upload DEFAULT sekarang
+        var needsInit = !products || products.length === 0;
+        if (needsInit) {
+            products  = JSON.parse(JSON.stringify(DEFAULT.products));
+            gallery   = JSON.parse(JSON.stringify(DEFAULT.gallery));
+            layanan   = JSON.parse(JSON.stringify(DEFAULT.layanan));
+            testimoni = JSON.parse(JSON.stringify(DEFAULT.testimoni));
+            settings  = JSON.parse(JSON.stringify(DEFAULT.settings));
+            kontak    = JSON.parse(JSON.stringify(DEFAULT.kontak));
+            profil    = JSON.parse(JSON.stringify(DEFAULT.profil));
+            await Promise.all([
+                dbSave('products',  products),
+                dbSave('gallery',   gallery),
+                dbSave('layanan',   layanan),
+                dbSave('testimoni', testimoni),
+                dbSave('settings',  settings),
+                dbSave('kontak',    kontak),
+                dbSave('profil',    profil),
+            ]);
+        }
+        hideLoading();
+        updateStats();
+        showToast('Terhubung ke Firebase âœ“', 'check-circle');
+    } catch(e) {
+        hideLoading();
+        console.error('initAdmin error', e);
+        // Gunakan localStorage/DEFAULT sebagai fallback total
+        products  = JSON.parse(localStorage.getItem('brk_products')  || 'null') || DEFAULT.products;
+        gallery   = JSON.parse(localStorage.getItem('brk_gallery')   || 'null') || DEFAULT.gallery;
+        layanan   = JSON.parse(localStorage.getItem('brk_layanan')   || 'null') || DEFAULT.layanan;
+        testimoni = JSON.parse(localStorage.getItem('brk_testimoni') || 'null') || DEFAULT.testimoni;
+        settings  = JSON.parse(localStorage.getItem('brk_settings')  || 'null') || DEFAULT.settings;
+        kontak    = JSON.parse(localStorage.getItem('brk_kontak')    || 'null') || DEFAULT.kontak;
+        profil    = JSON.parse(localStorage.getItem('brk_profil')    || 'null') || DEFAULT.profil;
+        updateStats();
+        showToast('Mode offline â€” data lokal digunakan', 'exclamation-triangle');
+    }
+}
+
+/* ===== PANEL SWITCH ===== */
+const panels = ['dashboard','produk','gallery','layanan','testimoni','profil','kontak','pengaturan'];
+const titles = { dashboard:'Dashboard', produk:'Kelola Produk', gallery:'Galeri Proyek', layanan:'Layanan', testimoni:'Testimoni', profil:'Profil Toko', kontak:'Info Kontak', pengaturan:'Pengaturan' };
+
+function switchPanel(id) {
+    panels.forEach(p => {
+        document.getElementById('panel-' + p).classList.toggle('active', p === id);
+        const nav = document.getElementById('nav-' + p);
+        if (nav) nav.classList.toggle('active', p === id);
+    });
+    document.getElementById('page-title').textContent = titles[id] || id;
+    if (id === 'produk')     { renderProdukTable(); }
+    if (id === 'gallery')    { renderGallery(); }
+    if (id === 'layanan')    { renderLayananTable(); }
+    if (id === 'testimoni')  { renderTestiTable(); }
+    if (id === 'kontak')     { loadKontakForm(); }
+    if (id === 'profil')     { loadProfilForm(); }
+    if (id === 'pengaturan') { loadSettings(); }
+    if (id === 'dashboard')  { updateStats(); }
+}
+
+/* ===== TOAST ===== */
+function showToast(msg, icon) {
+    icon = icon || 'check-circle';
+    const t = document.getElementById('toast');
+    document.getElementById('toast-msg').textContent = msg || 'Disimpan!';
+    t.querySelector('i').className = 'fas fa-' + icon;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+/* ===== ACTIVITY LOG ===== */
+function logActivity(action) {
+    const time = new Date().toLocaleTimeString('id-ID');
+    activityLog.unshift({ time, action });
+    if (activityLog.length > 10) activityLog.pop();
+    renderActivityLog();
+}
+function renderActivityLog() {
+    const tbody = document.getElementById('activity-log');
+    if (!tbody) return;
+    if (activityLog.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="color:var(--w-dim)">Belum ada aktivitas</td></tr>';
+        return;
+    }
+    tbody.innerHTML = activityLog.map(a =>
+        '<tr><td style="color:var(--w-dim);font-size:0.8rem;">' + a.time + '</td><td>' + a.action + '</td><td><span class="badge badge-green">âœ“ OK</span></td></tr>'
+    ).join('');
+}
+function updateStats() {
+    document.getElementById('s-produk').textContent  = products.length;
+    document.getElementById('s-gallery').textContent = gallery.length;
+    document.getElementById('s-testi').textContent   = testimoni.length;
+    document.getElementById('s-layanan').textContent = layanan.length;
+    renderActivityLog();
+}
+
+/* ===== EDIT MODE BAR ===== */
+function showEditBar() {
+    document.getElementById('edit-mode-bar').style.display = 'flex';
+}
+function hideEditBar() {
+    document.getElementById('edit-mode-bar').style.display = 'none';
+}
+function cancelEdit() {
+    editIdx = { product: -1, gallery: -1, layanan: -1, testi: -1 };
+    clearProductForm(); clearGalleryForm(); clearLayananForm(); clearTestiForm();
+    hideEditBar();
+    // Reset semua tombol ke mode tambah
+    var btns = [
+        {id:'btn-save-product', label:'<i class="fas fa-plus"></i> Tambah Produk'},
+        {id:'btn-save-gallery', label:'<i class="fas fa-plus"></i> Tambah Proyek'},
+        {id:'btn-save-layanan', label:'<i class="fas fa-plus"></i> Tambah Layanan'},
+        {id:'btn-save-testi',   label:'<i class="fas fa-plus"></i> Tambah Testimoni'},
+    ];
+    btns.forEach(function(b) {
+        var el = document.getElementById(b.id);
+        if (el) { el.innerHTML = b.label; el.style.background = ''; }
+    });
+    ['product-edit-hint','gallery-edit-hint','layanan-edit-hint','testi-edit-hint'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    showToast('Edit dibatalkan', 'times-circle');
+}
+
+/* ===== HELPERS ===== */
+function v(id) {
+    const el = document.getElementById(id);
+    return el ? el.value.trim() : '';
+}
+function setFormTitle(btnId, label, icon) {
+    const btn = document.getElementById(btnId);
+    if (btn) btn.innerHTML = '<i class="fas fa-' + icon + '"></i> ' + label;
+}
+
+/* ========================= PRODUK ========================= */
+function renderProdukTable() {
+    const tbody = document.getElementById('produk-table');
+    if (!tbody) return;
+    if (products.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--w-dim)">Belum ada produk</td></tr>';
+        return;
+    }
+    tbody.innerHTML = products.map(function(p, i) {
+        return '<tr' + (editIdx.product === i ? ' style="background:rgba(201,168,76,0.08)"' : '') + '>' +
+            '<td><strong>' + p.name + '</strong></td>' +
+            '<td style="color:var(--gold)">' + p.price + '</td>' +
+            '<td><span class="badge badge-gold">' + p.badge + '</span></td>' +
+            '<td style="display:flex;gap:6px;">' +
+                '<button class="btn btn-outline-sm" onclick="editProduct(' + i + ')" title="Edit"><i class="fas fa-pen"></i></button>' +
+                '<button class="btn btn-danger" onclick="deleteProduct(' + i + ')" title="Hapus"><i class="fas fa-trash"></i></button>' +
+            '</td></tr>';
+    }).join('');
+}
+
+function addProduct() {
+    const n = v('p-name'), pr = v('p-price'), ic = v('p-icon'), dc = v('p-desc');
+    const bd = document.getElementById('p-badge').value;
+    if (!n || !pr) { showToast('Nama dan harga wajib diisi!', 'exclamation-circle'); return; }
+    const data = { name: n, price: pr, icon: ic || 'fa-box', desc: dc, badge: bd };
+    if (editIdx.product >= 0) {
+        products[editIdx.product] = data;
+        editIdx.product = -1;
+        hideEditBar();
+        var btn = document.getElementById('btn-save-product');
+        if (btn) { btn.innerHTML = '<i class="fas fa-plus"></i> Tambah Produk'; btn.style.background = ''; }
+        var hint = document.getElementById('product-edit-hint');
+        if (hint) hint.style.display = 'none';
+        showToast('Produk diperbarui!', 'check-circle');
+    } else {
+        products.push(data);
+        showToast('Produk ditambahkan!', 'check-circle');
+    }
+    dbSave('products', products);
+    renderProdukTable();
+    clearProductForm();
+    updateStats();
+}
+
+function editProduct(i) {
+    const p = products[i];
+    document.getElementById('p-name').value  = p.name;
+    document.getElementById('p-price').value = p.price;
+    document.getElementById('p-icon').value  = p.icon || '';
+    document.getElementById('p-desc').value  = p.desc || '';
+    document.getElementById('p-badge').value = p.badge;
+    editIdx.product = i;
+    // Update UI: ganti label tombol
+    var btn = document.getElementById('btn-save-product');
+    if (btn) { btn.innerHTML = '<i class="fas fa-save"></i> Simpan Perubahan'; btn.style.background='#a07830'; }
+    var hint = document.getElementById('product-edit-hint');
+    if (hint) hint.style.display = 'inline';
+    showEditBar();
+    renderProdukTable();
+    document.getElementById('p-name').focus();
+    document.querySelector('#panel-produk .panel-card').scrollIntoView({ behavior: 'smooth' });
+}
+
+function deleteProduct(i) {
+    if (!confirm('Hapus produk "' + products[i].name + '"?')) return;
+    if (editIdx.product === i) { editIdx.product = -1; hideEditBar(); clearProductForm(); }
+    products.splice(i, 1);
+    dbSave('products', products);
+    renderProdukTable();
+    updateStats();
+    showToast('Produk dihapus', 'trash');
+}
+
+function clearProductForm() {
+    ['p-name','p-price','p-icon','p-desc'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    editIdx.product = -1;
+}
+
+/* ========================= GALLERY ========================= */
+function renderGallery() {
+    const container = document.getElementById('gallery-grid');
+    if (!container) return;
+    if (gallery.length === 0) {
+        container.innerHTML = '<p style="color:var(--w-dim);padding:1rem">Belum ada proyek. Tambahkan di atas.</p>';
+        return;
+    }
+    container.innerHTML = gallery.map(function(g, i) {
+        var highlight = editIdx.gallery === i ? 'border:2px solid var(--gold);' : '';
+        return '<div class="img-item" style="' + highlight + '">' +
+            (g.img
+                ? '<img src="' + g.img + '" alt="' + g.name + '" onerror="this.parentNode.querySelector(\'.img-placeholder\').style.display=\'flex\';this.style.display=\'none\'">' +
+                  '<div class="img-placeholder" style="display:none"><i class="fas fa-image"></i><span>Gambar tidak bisa dimuat</span></div>'
+                : '<div class="img-placeholder"><i class="fas fa-image"></i><span>Belum ada gambar</span></div>'
+            ) +
+            '<div class="img-label">' + g.name + '</div>' +
+            '<div style="font-size:0.72rem;padding:0 0.6rem 0.4rem;color:var(--w-dim);">' + (g.year || '') + '</div>' +
+            '<div class="img-actions">' +
+                '<button class="btn btn-outline-sm" onclick="editGallery(' + i + ')" style="font-size:0.7rem;padding:0.3rem 0.7rem;" title="Edit"><i class="fas fa-pen"></i></button>' +
+                '<button class="btn btn-danger" onclick="deleteGallery(' + i + ')" style="font-size:0.7rem;padding:0.3rem 0.7rem;" title="Hapus"><i class="fas fa-trash"></i></button>' +
+            '</div></div>';
+    }).join('');
+}
+
+function addGallery() {
+    const n = v('g-name'), y = v('g-year'), img = v('g-img');
+    if (!n) { showToast('Nama proyek wajib diisi!', 'exclamation-circle'); return; }
+    const data = { name: n, year: y, img: img || '' };
+    if (editIdx.gallery >= 0) {
+        gallery[editIdx.gallery] = data;
+        editIdx.gallery = -1;
+        hideEditBar();
+        var btn = document.getElementById('btn-save-gallery');
+        if (btn) { btn.innerHTML = '<i class="fas fa-plus"></i> Tambah Proyek'; btn.style.background = ''; }
+        var hint = document.getElementById('gallery-edit-hint');
+        if (hint) hint.style.display = 'none';
+        showToast('Proyek diperbarui!', 'check-circle');
+    } else {
+        gallery.push(data);
+        showToast('Proyek ditambahkan!', 'check-circle');
+    }
+    dbSave('gallery', gallery);
+    clearGalleryForm();
+    renderGallery();
+    updateStats();
+}
+
+function editGallery(i) {
+    const g = gallery[i];
+    document.getElementById('g-name').value = g.name;
+    document.getElementById('g-year').value = g.year || '';
+    document.getElementById('g-img').value  = g.img  || '';
+    if (g.img) {
+        document.getElementById('g-preview').style.display = 'block';
+        document.getElementById('g-preview-img').src = g.img;
+    } else {
+        document.getElementById('g-preview').style.display = 'none';
+    }
+    editIdx.gallery = i;
+    var btn = document.getElementById('btn-save-gallery');
+    if (btn) { btn.innerHTML = '<i class="fas fa-save"></i> Simpan Perubahan'; btn.style.background='#a07830'; }
+    var hint = document.getElementById('gallery-edit-hint');
+    if (hint) hint.style.display = 'inline';
+    showEditBar();
+    renderGallery();
+    document.getElementById('g-name').focus();
+    document.querySelector('#panel-gallery .panel-card').scrollIntoView({ behavior: 'smooth' });
+}
+
+function deleteGallery(i) {
+    if (!confirm('Hapus proyek "' + gallery[i].name + '"?')) return;
+    if (editIdx.gallery === i) { editIdx.gallery = -1; hideEditBar(); clearGalleryForm(); }
+    gallery.splice(i, 1);
+    dbSave('gallery', gallery);
+    renderGallery();
+    updateStats();
+    showToast('Proyek dihapus', 'trash');
+}
+
+function clearGalleryForm() {
+    ['g-name','g-year','g-img'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    var prev = document.getElementById('g-preview');
+    if (prev) prev.style.display = 'none';
+    editIdx.gallery = -1;
+}
+
+function previewGalleryImg() {
+    const url = v('g-img');
+    if (!url) { showToast('Masukkan URL gambar dulu!', 'exclamation-circle'); return; }
+    document.getElementById('g-preview').style.display = 'block';
+    document.getElementById('g-preview-img').src = url;
+}
+
+/* ========================= LAYANAN ========================= */
+function renderLayananTable() {
+    const tbody = document.getElementById('layanan-table');
+    if (!tbody) return;
+    if (layanan.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--w-dim)">Belum ada layanan</td></tr>';
+        return;
+    }
+    tbody.innerHTML = layanan.map(function(l, i) {
+        return '<tr' + (editIdx.layanan === i ? ' style="background:rgba(201,168,76,0.08)"' : '') + '>' +
+            '<td><strong>' + l.name + '</strong></td>' +
+            '<td><i class="fas ' + l.icon + '" style="color:var(--gold);margin-right:6px"></i>' + l.icon + '</td>' +
+            '<td style="display:flex;gap:6px;">' +
+                '<button class="btn btn-outline-sm" onclick="editLayanan(' + i + ')" title="Edit"><i class="fas fa-pen"></i></button>' +
+                '<button class="btn btn-danger" onclick="deleteLayanan(' + i + ')" title="Hapus"><i class="fas fa-trash"></i></button>' +
+            '</td></tr>';
+    }).join('');
+}
+
+function addLayanan() {
+    const n = v('l-name'), ic = v('l-icon'), dc = v('l-desc');
+    if (!n) { showToast('Nama layanan wajib diisi!', 'exclamation-circle'); return; }
+    const data = { name: n, icon: ic || 'fa-star', desc: dc };
+    if (editIdx.layanan >= 0) {
+        layanan[editIdx.layanan] = data;
+        editIdx.layanan = -1;
+        hideEditBar();
+        var btn = document.getElementById('btn-save-layanan');
+        if (btn) { btn.innerHTML = '<i class="fas fa-plus"></i> Tambah Layanan'; btn.style.background = ''; }
+        var hint = document.getElementById('layanan-edit-hint');
+        if (hint) hint.style.display = 'none';
+        showToast('Layanan diperbarui!', 'check-circle');
+    } else {
+        layanan.push(data);
+        showToast('Layanan ditambahkan!', 'check-circle');
+    }
+    dbSave('layanan', layanan);
+    clearLayananForm();
+    renderLayananTable();
+    updateStats();
+}
+
+function editLayanan(i) {
+    const l = layanan[i];
+    document.getElementById('l-name').value = l.name;
+    document.getElementById('l-icon').value = l.icon || '';
+    document.getElementById('l-desc').value = l.desc || '';
+    editIdx.layanan = i;
+    var btn = document.getElementById('btn-save-layanan');
+    if (btn) { btn.innerHTML = '<i class="fas fa-save"></i> Simpan Perubahan'; btn.style.background='#a07830'; }
+    var hint = document.getElementById('layanan-edit-hint');
+    if (hint) hint.style.display = 'inline';
+    showEditBar();
+    renderLayananTable();
+    document.getElementById('l-name').focus();
+    document.querySelector('#panel-layanan .panel-card').scrollIntoView({ behavior: 'smooth' });
+}
+
+function deleteLayanan(i) {
+    if (!confirm('Hapus layanan "' + layanan[i].name + '"?')) return;
+    if (editIdx.layanan === i) { editIdx.layanan = -1; hideEditBar(); clearLayananForm(); }
+    layanan.splice(i, 1);
+    dbSave('layanan', layanan);
+    renderLayananTable();
+    updateStats();
+    showToast('Layanan dihapus', 'trash');
+}
+
+function clearLayananForm() {
+    ['l-name','l-icon','l-desc'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    editIdx.layanan = -1;
+}
+
+/* ========================= TESTIMONI ========================= */
+function renderTestiTable() {
+    const tbody = document.getElementById('testi-table');
+    if (!tbody) return;
+    if (testimoni.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--w-dim)">Belum ada testimoni</td></tr>';
+        return;
+    }
+    tbody.innerHTML = testimoni.map(function(t, i) {
+        var stars = '';
+        for (var s = 0; s < t.rating; s++) stars += 'â˜…';
+        return '<tr' + (editIdx.testi === i ? ' style="background:rgba(201,168,76,0.08)"' : '') + '>' +
+            '<td><strong>' + t.name + '</strong></td>' +
+            '<td style="color:var(--w-dim)">' + t.role + '</td>' +
+            '<td style="color:var(--gold)">' + stars + '</td>' +
+            '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--w-dim)">' + t.text + '</td>' +
+            '<td style="display:flex;gap:6px;">' +
+                '<button class="btn btn-outline-sm" onclick="editTesti(' + i + ')" title="Edit"><i class="fas fa-pen"></i></button>' +
+                '<button class="btn btn-danger" onclick="deleteTesti(' + i + ')" title="Hapus"><i class="fas fa-trash"></i></button>' +
+            '</td></tr>';
+    }).join('');
+}
+
+function addTestimoni() {
+    const n = v('t-name'), r = v('t-role'), tx = v('t-text');
+    const rt = parseInt(document.getElementById('t-rating').value) || 5;
+    if (!n || !tx) { showToast('Nama dan ulasan wajib diisi!', 'exclamation-circle'); return; }
+    const data = { name: n, role: r, rating: rt, text: tx };
+    if (editIdx.testi >= 0) {
+        testimoni[editIdx.testi] = data;
+        editIdx.testi = -1;
+        hideEditBar();
+        var btn = document.getElementById('btn-save-testi');
+        if (btn) { btn.innerHTML = '<i class="fas fa-plus"></i> Tambah Testimoni'; btn.style.background = ''; }
+        var hint = document.getElementById('testi-edit-hint');
+        if (hint) hint.style.display = 'none';
+        showToast('Testimoni diperbarui!', 'check-circle');
+    } else {
+        testimoni.push(data);
+        showToast('Testimoni ditambahkan!', 'check-circle');
+    }
+    dbSave('testimoni', testimoni);
+    clearTestiForm();
+    renderTestiTable();
+    updateStats();
+}
+
+function editTesti(i) {
+    const t = testimoni[i];
+    document.getElementById('t-name').value   = t.name;
+    document.getElementById('t-role').value   = t.role || '';
+    document.getElementById('t-text').value   = t.text;
+    document.getElementById('t-rating').value = t.rating || 5;
+    editIdx.testi = i;
+    var btn = document.getElementById('btn-save-testi');
+    if (btn) { btn.innerHTML = '<i class="fas fa-save"></i> Simpan Perubahan'; btn.style.background='#a07830'; }
+    var hint = document.getElementById('testi-edit-hint');
+    if (hint) hint.style.display = 'inline';
+    showEditBar();
+    renderTestiTable();
+    document.getElementById('t-name').focus();
+    document.querySelector('#panel-testimoni .panel-card').scrollIntoView({ behavior: 'smooth' });
+}
+
+function deleteTesti(i) {
+    if (!confirm('Hapus testimoni dari "' + testimoni[i].name + '"?')) return;
+    if (editIdx.testi === i) { editIdx.testi = -1; hideEditBar(); clearTestiForm(); }
+    testimoni.splice(i, 1);
+    dbSave('testimoni', testimoni);
+    renderTestiTable();
+    updateStats();
+    showToast('Testimoni dihapus', 'trash');
+}
+
+function clearTestiForm() {
+    ['t-name','t-role','t-text'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    editIdx.testi = -1;
+}
+
+/* ========================= PROFIL ========================= */
+function loadProfilForm() {
+    document.getElementById('pr-name').value         = profil.name        || '';
+    document.getElementById('pr-exp').value          = profil.exp         || 10;
+    document.getElementById('pr-project').value      = profil.project     || 500;
+    document.getElementById('pr-produk-count').value = profil.produkCount || 50;
+    document.getElementById('pr-satisfaction').value = profil.satisfaction || 98;
+    document.getElementById('pr-desc').value         = profil.desc        || '';
+}
+function saveProfil() {
+    profil = {
+        name:         v('pr-name'),
+        exp:          parseInt(v('pr-exp')) || 10,
+        project:      parseInt(v('pr-project')) || 500,
+        produkCount:  parseInt(v('pr-produk-count')) || 50,
+        satisfaction: parseInt(v('pr-satisfaction')) || 98,
+        desc:         v('pr-desc')
+    };
+    dbSave('profil', profil);
+    showToast('Profil disimpan!');
+}
+
+/* ========================= KONTAK ========================= */
+function loadKontakForm() {
+    document.getElementById('k-wa').value     = kontak.wa     || '';
+    document.getElementById('k-telp').value   = kontak.telp   || '';
+    document.getElementById('k-email').value  = kontak.email  || '';
+    document.getElementById('k-alamat').value = kontak.alamat || '';
+    document.getElementById('k-jam').value    = kontak.jam    || '';
+}
+function saveKontak() {
+    kontak = {
+        wa:     v('k-wa'),
+        telp:   v('k-telp'),
+        email:  v('k-email'),
+        alamat: v('k-alamat'),
+        jam:    v('k-jam')
+    };
+    dbSave('kontak', kontak);
+    showToast('Kontak disimpan!');
+}
+
+/* ========================= SETTINGS ========================= */
+function loadSettings() {
+    document.getElementById('set-marquee').checked = settings.marquee !== false;
+    document.getElementById('set-reveal').checked  = settings.reveal  !== false;
+    document.getElementById('set-floatwa').checked = settings.floatwa !== false;
+    document.getElementById('set-autorot').checked = settings.autorot !== false;
+}
+function savePengaturan() {
+    settings = {
+        marquee: document.getElementById('set-marquee').checked,
+        reveal:  document.getElementById('set-reveal').checked,
+        floatwa: document.getElementById('set-floatwa').checked,
+        autorot: document.getElementById('set-autorot').checked
+    };
+    dbSave('settings', settings);
+    showToast('Pengaturan disimpan!');
+}
+
+/* ========================= RESET ========================= */
+async function resetAllData() {
+    if (!confirm('PERHATIAN: Semua data akan direset ke default. Ini tidak bisa dibatalkan. Lanjutkan?')) return;
+    showLoading('Mereset data...');
+    products  = JSON.parse(JSON.stringify(DEFAULT.products));
+    gallery   = JSON.parse(JSON.stringify(DEFAULT.gallery));
+    layanan   = JSON.parse(JSON.stringify(DEFAULT.layanan));
+    testimoni = JSON.parse(JSON.stringify(DEFAULT.testimoni));
+    settings  = JSON.parse(JSON.stringify(DEFAULT.settings));
+    kontak    = JSON.parse(JSON.stringify(DEFAULT.kontak));
+    profil    = JSON.parse(JSON.stringify(DEFAULT.profil));
+    try {
+        await Promise.all([
+            dbSave('products',  products),
+            dbSave('gallery',   gallery),
+            dbSave('layanan',   layanan),
+            dbSave('testimoni', testimoni),
+            dbSave('settings',  settings),
+            dbSave('kontak',    kontak),
+            dbSave('profil',    profil),
+        ]);
+    } catch(e) { console.warn('reset error', e); }
+    hideLoading();
+    cancelEdit();
+    updateStats();
+    showToast('Data direset ke default', 'undo');
+}
+
+/* ========================= EXPORT / IMPORT ========================= */
+function exportData() {
+    const data = { products: products, gallery: gallery, layanan: layanan, testimoni: testimoni, settings: settings, kontak: kontak, profil: profil };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'bajaringanku-data.json';
+    a.click();
+    showToast('Data diekspor!');
+}
+function importData(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+        try {
+            const d = JSON.parse(ev.target.result);
+            if (d.products)  { products  = d.products;  dbSave('products',  products); }
+            if (d.gallery)   { gallery   = d.gallery;   dbSave('gallery',   gallery); }
+            if (d.layanan)   { layanan   = d.layanan;   dbSave('layanan',   layanan); }
+            if (d.testimoni) { testimoni = d.testimoni; dbSave('testimoni', testimoni); }
+            if (d.settings)  { settings  = d.settings;  dbSave('settings',  settings); }
+            if (d.kontak)    { kontak    = d.kontak;    dbSave('kontak',    kontak); }
+            if (d.profil)    { profil    = d.profil;    dbSave('profil',    profil); }
+            updateStats();
+            showToast('Data berhasil diimport!');
+        } catch(err) {
+            showToast('File JSON tidak valid!', 'exclamation-circle');
+        }
+    };
+    reader.readAsText(file);
+}
+
+/* ========================= INIT ========================= */
+initAdmin();
+</script>
+
+</body>
+</html>
